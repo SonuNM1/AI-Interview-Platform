@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+enum RoleType {
+  ADMIN
+  RECRUITER
+  CANDIDATE
+}
+
+model User {
+  id  String @id @default(cuid())
+  email String @unique 
+  passwordHash String 
+  firstName String?
+  lastName String?
+  phone String? @unique 
+
+  isEmailVerified Boolean @default(false)
+  isPhoneVerified Boolean @default(false)
+
+  role RoleType @default(CANDIDATE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt 
+
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id   String @id @default(cuid())
+
+  tokenHash String 
+  
+  deviceName  String?
+  ipAddress String? 
+
+  expiresAt DateTime
+  revokedAt DateTime? 
+
+  createdAt DateTime @default(now())
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+}

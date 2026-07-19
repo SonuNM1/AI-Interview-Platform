@@ -1,0 +1,40 @@
+# Services that our application needs 
+
+services:
+
+  # PostgreSQL Database 
+  postgres:
+
+    # Official Docker image 
+
+    image: postgres:17
+
+    # Easy to identify container 
+
+    container_name: ai-postgres
+
+    # Restart automatically after system reboot 
+
+    restart: unless-stopped
+
+    # Initial database configuration 
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_interview
+
+    # HostPort : ContainerPort 
+
+    ports:
+      - "5432:5432"
+
+    # Persist database data 
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+# Named Docker Volume 
+
+volumes:
+  postgres_data:
