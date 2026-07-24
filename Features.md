@@ -113,3 +113,30 @@ React Hook Form
 Zod
 Role-based Routing
 
+
+
+## Features 
+
+- AI Mock Inteviews
+- AI Interviewer (Voice & Chat)
+- Resume Parsing
+- Resume vs JD Matching 
+- Candidate & Recruiter Dashboard 
+- Interview Scheduling 
+- Live Video Interviews 
+- Real-time Chat 
+- Coding Assessments 
+- AI Feedback & Scoring 
+- Question Bank Management 
+- ATS & Candidate Tracking 
+- RBAC
+- Email & Mobile OTP Authentication 
+- Google, GitHub & LinkedIn Login 
+- Notifications (Email/SMS/In-App)
+- File Uploads (Resume, Documents)
+- Search & Filtering
+- Analytics Dashboard
+- Subscription Plans
+- Razorpay Payment Gateway 
+- Webhooks (Payment & Events)
+- Admin Panel 

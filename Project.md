@@ -21,3 +21,5 @@ This architecture improves scalability, fault isolation, maintainability and ind
 - docker compose 
 
 - DBeaver 
+
+- Prisma 

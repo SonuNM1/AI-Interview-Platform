@@ -1,67 +1,128 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
-import { authService } from "../services/auth.service.js";
+import {
+  getProfile,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  registerUser,
+} from "../services/auth.service.js";
+import {
+  loginSchema,
+  refreshTokenSchema,
+  registerSchema,
+} from "../validators/auth.validator.js";
+import { JwtPayload } from "jsonwebtoken";
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, firstName, lastName, phone } = req.body;
+    const validatedData = registerSchema.parse(req.body);
 
-    // Basic validation
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and Password are required",
-      });
-    }
+    const user = await registerUser(validatedData);
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
-
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already registered",
-      });
-    }
-
-    // Hash password
-    const passwordHash = await authService.hashPassword(password);
-
-    // Save user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        firstName,
-        lastName,
-        phone,
-      },
-    });
-
-    // Never send password hash to frontend
     return res.status(201).json({
       success: true,
       message: "User registered successfully",
-      data: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-        role: user.role,
-      },
+      data: user,
     });
-
   } catch (error) {
-    console.error(error);
-
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
+    });
+  }
+};
+
+export const login = async (req: Request, res: Response) => {
+  try {
+    const validatedData = loginSchema.parse(req.body);
+
+    const result = await loginUser(validatedData);
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const refresh = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    // validate request body
+
+    const validatedData = refreshTokenSchema.parse(req.body);
+
+    // Generate a new access token
+
+    const result = await refreshAccessToken(validatedData);
+
+    res.status(200).json({
+      success: true,
+      message: "Access token refreshed successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Refresh controller error: ", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal Server Error",
+      error: error instanceof Error ? error.stack : error,
+    });
+  }
+};
+
+// Get logged-in user's profile
+
+export const profile = async (req: Request, res: Response) => {
+  try {
+    // read logged-in user from middlewrae
+
+    const user = req.user as JwtPayload;
+
+    // fetch profile
+
+    const profile = await getProfile(user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile fetched successfully",
+      data: profile,
+    });
+  } catch (error) {
+    console.error("Profile error: ", error);
+
+    return res.status(500).json({
+      succes: false,
+      message: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+export const logout = async (req: Request, res: Response) => {
+  try {
+    await logoutUser(req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    console.error("Logout Controller Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
