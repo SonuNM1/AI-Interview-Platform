@@ -7,6 +7,7 @@ import {
 } from "../validators/auth.validator.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 import jwt from "jsonwebtoken";
+import { publishMessage } from "@repo/shared-rabbitmq";
 
 export const hashPassword = async (password: string) => {
   return bcrypt.hash(password, 10);
@@ -17,7 +18,7 @@ export const comparePassword = async (password: string, hash: string) => {
 };
 
 export const registerUser = async (data: RegisterInput) => {
-  const { email, password, firstName, lastName, phone } = data;
+  const { email, password } = data;
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -33,18 +34,25 @@ export const registerUser = async (data: RegisterInput) => {
     data: {
       email,
       passwordHash,
-      firstName,
-      lastName,
-      phone,
     },
   });
+
+  /*Creating empty profile in User Service 
+
+  await axios.post(`${process.env.USER_SERVICE_URL}/api/v1/users`, {
+    id: user.id 
+  })*/
+
+  // Publish User created event 
+
+  await publishMessage("user_created", {
+    id: user.id, 
+    email: user.email 
+  })
 
   return {
     id: user.id,
     email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phone: user.phone,
     role: user.role,
   };
 };
