@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { prisma } from "../lib/prisma.js";
+import { ZodError } from "zod";
 import {
   getProfile,
   loginUser,
@@ -14,7 +14,7 @@ import {
 } from "../validators/auth.validator.js";
 import { JwtPayload } from "jsonwebtoken";
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validatedData = registerSchema.parse(req.body);
 
@@ -26,10 +26,7 @@ export const register = async (req: Request, res: Response) => {
       data: user,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+    next(error) ; // forward error to global error handler 
   }
 };
 

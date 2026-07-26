@@ -8,6 +8,7 @@ import {
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 import jwt from "jsonwebtoken";
 import { publishMessage } from "@repo/shared-rabbitmq";
+import { AppError } from "../utils/AppError.js";
 
 export const hashPassword = async (password: string) => {
   return bcrypt.hash(password, 10);
@@ -25,7 +26,10 @@ export const registerUser = async (data: RegisterInput) => {
   });
 
   if (existingUser) {
-    throw new Error("Email already registered");
+    throw new AppError(
+      "Email already registered", 
+      409
+    );
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -45,10 +49,14 @@ export const registerUser = async (data: RegisterInput) => {
 
   // Publish User created event 
 
+  console.log("Before publish") ;
+
   await publishMessage("user_created", {
     id: user.id, 
     email: user.email 
   })
+
+  console.log("After publish")
 
   return {
     id: user.id,
@@ -65,7 +73,7 @@ export const loginUser = async (data: LoginInput) => {
   });
 
   if (!user) {
-    throw new Error("Invalid email or password");
+    throw new AppError("Invalid email or password", 401);
   }
 
   const isPasswordValid = await comparePassword(password, user.passwordHash);
@@ -127,8 +135,6 @@ export const loginUser = async (data: LoginInput) => {
     user: {
       id: user.id,
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
       role: user.role,
     },
     accessToken,
@@ -213,8 +219,6 @@ export const getProfile = async (userId: string) => {
   return {
     id: user.id,
     email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
     role: user.role,
     createdAt: user.createdAt,
   };

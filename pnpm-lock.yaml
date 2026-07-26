@@ -271,6 +271,9 @@ importers:
       '@prisma/client':
         specifier: 6.16.2
         version: 6.16.2(prisma@6.16.2(typescript@6.0.3))(typescript@6.0.3)
+      '@repo/shared-rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/shared-rabbitmq
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0

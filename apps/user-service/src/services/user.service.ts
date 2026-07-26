@@ -2,6 +2,7 @@ import prisma from "../utils/prisma.js";
 
 interface CreateUserInput {
     id: string; 
+    email: string; 
 }
 
 interface updateUserInput {
@@ -21,13 +22,22 @@ interface GetUserInput {
 }
 
 export const createUserProfile = async(data: CreateUserInput) => {
-    const user = await prisma.user.create({
-        data: {
-            id: data.id
+    const existingUser = await prisma.user.findUnique({
+        where: {
+            id: data.id 
         }
-    }); 
+    }) ; 
 
-    return user; 
+    if(existingUser) {
+        return existingUser ; 
+    }
+
+    return prisma.user.create({
+        data: {
+            id: data.id, 
+            email: data.email 
+        }
+    })
 }
 
 export const updateUserProfile = async (data: updateUserInput) => {

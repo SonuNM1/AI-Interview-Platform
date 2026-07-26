@@ -1,5 +1,6 @@
-import express, {Express} from "express"
+import express from "express"
 import authRoutes from "./routes/auth.routes.js"
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express() ; 
 
@@ -16,5 +17,9 @@ app.get("/health", (req, res) => {
 // Auth routes 
 
 app.use("/api/v1/auth", authRoutes)
+
+// Global error handler 
+
+app.use(errorHandler)
 
 export default app ; 

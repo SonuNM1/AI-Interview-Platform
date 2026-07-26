@@ -1,11 +1,20 @@
 ## Responsibilities 
 
-- Register
+- Register (Email/password registration)
 - Login
-- Password
-- JWT
-- Refresh Token 
+- JWT access & refresh tokens 
 - Logout
+- Forgot password
+- Reset password 
+- Email OTP verification
+- Resend OTP 
+- Refresh token rotation
+- Google OAuth
+- GitHub OAuth (and other providers)
+- Role-based authorization
+- Session management
+- Multi-device login/logout
+
 
 We use Docker to run PostgreSQL locally without installing it on Windows. Prisma is our ORM that converts TypeScript code into SQL queries, making database operations easier and type-safe. Prisma Studio is only a UI to view and edit the data—it is not the database. The actual data is stored in the PostgreSQL database running inside the Docker container.
 

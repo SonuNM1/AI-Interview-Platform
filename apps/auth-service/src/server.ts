@@ -1,7 +1,11 @@
 import app from "./app.js";
 import dotenv from "dotenv"
-dotenv.config()
+dotenv.config({
+    override: true 
+})
 import {connectRabbitMQ} from "@repo/shared-rabbitmq" ; 
+
+console.log("PORT from env:", process.env.PORT);
 
 const PORT = process.env.PORT || 5000 ; 
 
