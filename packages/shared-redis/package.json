@@ -1,0 +1,9 @@
+{
+  "name": "@repo/shared-redis",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "ioredis": "^5.11.1"
+  }
+}

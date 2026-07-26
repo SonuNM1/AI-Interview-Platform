@@ -4,8 +4,8 @@ dotenv.config({
 });
 import {
     connectRabbitMQ, 
-    consumeMessage
-} from "@repo/shared-rabbitmq" ; 
+    consumeEvent
+} from "@repo/shared-rabbitmq"
 import { createUserProfile } from "./services/user.service.js";
 
 import app from "./app.js";
@@ -15,16 +15,21 @@ const PORT = process.env.PORT || 5001;
 const startServer = async () => {
     try {
         await connectRabbitMQ();
-        await consumeMessage("user_created", async (data) => {
-            console.log("📩 Received:", data);
-            
-            await createUserProfile({
-                id: data.id, 
-                email: data.email
-            })
 
-            console.log("✅ Profile created");
-        });
+        await consumeEvent(
+            "user_events", 
+            "user_profile_queue", 
+            async (data) => {
+                console.log("📩 Received:", data) ; 
+
+                await createUserProfile({
+                    id: data.id, 
+                    email: data.email
+                }) ; 
+
+                console.log("✅ Profile created") ; 
+            }
+        )
 
         app.listen(PORT, () => {
             console.log(`User Service running on http://localhost:${PORT}`);

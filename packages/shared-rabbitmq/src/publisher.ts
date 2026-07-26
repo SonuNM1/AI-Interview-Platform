@@ -1,20 +1,28 @@
 import { getChannel } from "./connection.js";
 
-export const publishMessage = async (queue: string, message: object) => {
+export const publishEvent = async (
+  exchange: string, 
+  message: object 
+) => {
   try {
-    const channel = getChannel();
+    const channel = getChannel() ; 
 
-    await channel.assertQueue(queue, {
-      durable: true,
-    });
+    await channel.assertExchange(exchange, "fanout", {
+      durable: true 
+    }) ; 
 
-    channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), {
-      persistent: true,
-    });
+    channel.publish(
+      exchange, 
+      "", 
+      Buffer.from(JSON.stringify(message)), 
+      {
+        persistent: true 
+      }
+    ) ; 
 
-    console.log(`📩 Message published to queue: ${queue}`);
+    console.log(`📩 Event published to exchange: ${exchange}`) ; 
   } catch (error) {
-    console.error("Publisher Error: ", error);
-    throw error;
+    console.error("Publisher error: ", error) ; 
+    throw error ; 
   }
-};
+}

@@ -7,7 +7,7 @@ import {
 } from "../validators/auth.validator.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 import jwt from "jsonwebtoken";
-import { publishMessage } from "@repo/shared-rabbitmq";
+import { publishEvent } from "@repo/shared-rabbitmq";
 import { AppError } from "../utils/AppError.js";
 
 export const hashPassword = async (password: string) => {
@@ -51,7 +51,7 @@ export const registerUser = async (data: RegisterInput) => {
 
   console.log("Before publish") ;
 
-  await publishMessage("user_created", {
+  await publishEvent("user_events", {
     id: user.id, 
     email: user.email 
   })
