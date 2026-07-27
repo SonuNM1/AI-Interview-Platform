@@ -80,3 +80,17 @@ export const getUserProfile = async (data: GetUserInput) => {
 
     return user ; 
 }
+
+// delete user profile form user service database - development only 
+
+export const deleteUserProfile = async (userId: string) => {
+    await prisma.user.delete({
+        where: {
+            id: userId 
+        }
+    }) ; 
+
+    return {
+        deleted: true 
+    }
+}

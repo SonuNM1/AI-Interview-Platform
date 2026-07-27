@@ -1,5 +1,5 @@
 import { Router } from "express";
-import {createUser, getMyProfile, getUser, updateUser} from "../controllers/user.controller.js";
+import {createUser, deleteUserController, getMyProfile, getUser, updateUser} from "../controllers/user.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = Router()
@@ -17,6 +17,10 @@ router.patch("/:id", authMiddleware, updateUser)
 // Get profile 
 
 router.get("/:id", getUser)
+
+// delete user profile - deve only 
+
+router.delete("/delete-user/:id", deleteUserController)
 
 // Authenticated 
 

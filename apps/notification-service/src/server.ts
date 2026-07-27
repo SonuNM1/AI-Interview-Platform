@@ -6,6 +6,7 @@ import { connectRabbitMQ, consumeEvent } from "@repo/shared-rabbitmq";
 import { connectRedis } from "@repo/shared-redis";
 import { sendVerificationOTP } from "./services/email.service.js";
 import { createOTP } from "./services/otp.service.js";
+import { UserEventType } from "@repo/shared-rabbitmq";
 
 console.log("Current Directory:", process.cwd());
 
@@ -24,14 +25,35 @@ const startServer = async () => {
                 
                 console.log(data) ; 
 
-                const otp = await createOTP(data.id) ;
+                if(data.type === UserEventType.USER_REGISTERED) {
+                    const otp = await createOTP(data.id) ; 
 
-                console.log("OTP Generated: ", otp) ; 
+                    console.log("OTP Generated: ", otp) ; 
 
-                await sendVerificationOTP(
-                    data.email, 
-                    otp
-                )
+                    await sendVerificationOTP(
+                        data.email, 
+                        otp 
+                    ) ;
+                } else if (data.type === UserEventType.RESEND_OTP) {
+                    const otp = await createOTP(data.id, true )
+
+                    console.log("Resend OTP: ", otp) ; 
+
+                    await sendVerificationOTP(
+                        data.email, 
+                        otp
+                    )
+
+                } else if(data.type === UserEventType.PASSWORD_RESET) {
+                    const otp = await createOTP(data.id) ; 
+
+                    console.log("Password Reset OTP: ", otp) ; 
+
+                    await sendVerificationOTP(
+                        data.email, 
+                        otp    
+                    )
+                }
             }
         )
 

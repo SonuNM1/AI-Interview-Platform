@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
-import {createUserProfile, getUserProfile, updateUserProfile} from "../services/user.service.js"
+import { Request, Response, NextFunction } from "express";
+import {createUserProfile, deleteUserProfile, getUserProfile, updateUserProfile} from "../services/user.service.js"
 
 export const createUser = async (req: Request, res: Response) => {
     try {
@@ -118,5 +118,27 @@ export const getMyProfile = async (
             success: false,
             message: error instanceof Error ? error.message : "Internal Server Error"
         })
+    }
+}
+
+// delete user profile - development only 
+
+export const deleteUserController = async (
+    req: Request, 
+    res: Response, 
+    next: NextFunction 
+) => {
+    try {
+        const userId = req.params.id as string ; 
+
+        const result = await deleteUserProfile(userId) ; 
+
+        return res.status(200).json({
+            success: true, 
+            message: "User profile deleted successfully", 
+            data: result 
+        })
+    } catch (error) {
+        next(error) ; 
     }
 }

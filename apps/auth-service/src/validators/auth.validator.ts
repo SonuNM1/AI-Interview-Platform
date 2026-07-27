@@ -18,8 +18,32 @@ export const refreshTokenSchema = z.object({
     refreshToken: z.string().min(1, "Refresh token is required")
 })
 
+export const resendOTPSchema = z.object({
+    email: z.email()
+})
+
+export const forgotPasswordSchema = z.object({
+    email: z.email()
+})
+
+const passwordSchema = z.string().min(4, "Password must be at least 6 characters") ; 
+
+// reset password 
+
+export const resetPasswordSchema = z.object({
+    email: z.email(), 
+
+    otp: z.string().length(6, "OTP must be 6 digits"), 
+
+    newPassword: passwordSchema
+})
+
+
 type RegisterInput = z.infer<typeof registerSchema> ; 
 type LoginInput = z.infer<typeof loginSchema> ;
 type RefreshTokenInput = z.infer<typeof refreshTokenSchema>
+type ResendOTPInput = z.infer<typeof resendOTPSchema> ; 
+type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
+type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>
 
-export type {RegisterInput, LoginInput, RefreshTokenInput} ; 
+export type {RegisterInput, LoginInput, RefreshTokenInput, ResendOTPInput, ForgotPasswordInput, ResetPasswordSchema} ; 

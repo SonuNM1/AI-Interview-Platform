@@ -56,6 +56,20 @@ services:
 
     restart: unless-stopped
 
+  redis-commander: 
+    image: rediscommander/redis-commander
+    container_name: redis-commander
+    restart: unless-stopped
+
+    ports: 
+      - "8081:8081"
+
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+
+    depends_on: 
+      - redis 
+
 # Named Docker Volume 
 
 volumes:
