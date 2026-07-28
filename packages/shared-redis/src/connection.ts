@@ -1,6 +1,7 @@
 import Redis from "ioredis";
+import type {Redis as RedisClient} from "ioredis"
 
-let redis: Redis | null = null;
+let redis: RedisClient | null = null;
 
 export const connectRedis = () => {
     if (!redis) {
@@ -13,7 +14,7 @@ export const connectRedis = () => {
 
         redis = new Redis(redisUrl) ; 
 
-        redis.on("error", (err) => {
+        redis.on("error", (err: Error) => {
             console.error("Redis Error:", err);
         });
     }
