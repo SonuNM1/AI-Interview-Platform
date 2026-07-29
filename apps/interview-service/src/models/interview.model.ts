@@ -2,7 +2,9 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export enum InterviewStatus {
   DRAFT = "DRAFT",
+  PUBLISHED = "PUBLISHED",
   SCHEDULED = "SCHEDULED",
+  PAUSED = "PAUSED",
   IN_PROGRESS = "IN_PROGRESS",
   COMPLETED = "COMPLETED",
   CANCELLED = "CANCELLED",
@@ -36,6 +38,9 @@ export interface IInterview extends Document {
   feedback?: string;
   startedAt?: Date;
   completedAt?: Date;
+
+  accessToken?: string; 
+  expiresAt?: Date; 
 }
 
 const interviewSchema = new Schema<IInterview>({
@@ -88,6 +93,18 @@ const interviewSchema = new Schema<IInterview>({
   feedback: String, 
   startedAt: Date, 
   completedAt: Date, 
+
+  // secure token used to generate a public interview link. Candidates access the interview using this token instead of the MongoDB ObjectId 
+
+  accessToken: {
+    type: String, 
+    unique: true, 
+    sparse: true 
+  }, 
+
+  expiresAt: {
+    type: Date
+  }
 }, {
     timestamps: true 
 });

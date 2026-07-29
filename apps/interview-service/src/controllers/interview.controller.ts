@@ -160,9 +160,12 @@ export const publishInterview = async (
             })
         }
 
+        const shareLink = `${process.env.FRONTEND_URL}/interview/${interview.accessToken}` ; 
+
         return res.status(200).json({
             success: true, 
-            message: "Interview published successfully", 
+            message: "Interview published successfully",
+            shareLink,  
             data: interview
         })
     } catch (error: any) {

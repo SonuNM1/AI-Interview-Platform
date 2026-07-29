@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createInterview, deleteInterview, getAllInterviews, getInterviewById, updateInterview } from "../controllers/interview.controller.js";
+import { createInterview, deleteInterview, getAllInterviews, getInterviewById, publishInterview, updateInterview } from "../controllers/interview.controller.js";
 
 const router = Router() ;
 
@@ -11,6 +11,8 @@ router.get("/", getAllInterviews) ;
 
 router.put("/:id", updateInterview) ; 
 
-router.delete("/:id", deleteInterview)
+router.delete("/:id", deleteInterview) ;
+
+router.patch("/:id/publish", publishInterview) ; 
 
 export default router; 
