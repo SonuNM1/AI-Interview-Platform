@@ -1,32 +1,59 @@
-import { IInterview } from "../models/interview.model.js";
-import { IInterviewQuestion } from "../models/interviewQuestion.model.js";
+import { IInterview, InterviewDifficulty } from "../models/interview.model.js";
+import { IInterviewQuestion, QuestionType } from "../models/interviewQuestion.model.js";
 import { aiProvider } from "../ai/aiProvider.js";
-import { buildNextQuestionPrompt } from "../ai/prompts.js";
+import {buildEvaluationPrompt, buildQuestionPrompt} from "../ai/prompts.js";
+import { EvaluationResult } from "../ai/openai.service.js";
 
-interface GenerateNextQuestionParams {
+interface GenerateQuestionParams  {
   interview: IInterview;
-  previousQuestion: IInterviewQuestion;
-  previousAnswer: string;
+  previousQuestion?: IInterviewQuestion;
+  previousAnswer?: string;
 }
 
-/**
- * Generates the next interview question for the candidate.
- *
- * Currently this helper returns predefined questions to simulate an AI interview.
- * In future, this is the only place that will integrate with Gemini/OpenAI to
- * generate context-aware follow-up questions based on the candidate's response.
- */
-export const generateNextQuestion = async ({
+export interface GeneratedQuestion {
+  question: string;
+  type: QuestionType;
+  difficulty: InterviewDifficulty;
+}
+
+/*
+Generates interview questions using the configured AI provider. Keeps interview business logic independent from prompt generation and the underlying AI provider. 
+*/
+
+export const generateQuestion = async ({
   interview,
   previousQuestion,
   previousAnswer,
-}: GenerateNextQuestionParams): Promise<string> => {
+}: GenerateQuestionParams ): Promise<GeneratedQuestion> => {
 
-  const prompt = buildNextQuestionPrompt({
+  const prompt = buildQuestionPrompt({
     interview, 
     previousAnswer, 
     previousQuestion
   })
 
-  return await aiProvider.generateQuestion(prompt) ;
+  return await aiProvider.generateQuestion(prompt);
+};
+
+/*
+Evaluate the candidate's answer using the configured AI provider. 
+
+Builds an evaluation prompt and delegates teh assessment to the configured AI provider while keeping interview business logic independent from the underlying LLM. 
+*/
+
+export const evaluateCandidateAnswer = async ({
+  question,
+  candidateAnswer,
+}: {
+  question: string;
+  candidateAnswer: string;
+}): Promise<EvaluationResult> => {
+
+  const prompt = buildEvaluationPrompt({
+    question,
+    candidateAnswer,
+  });
+
+  return await aiProvider.evaluateAnswer(prompt);
+
 };

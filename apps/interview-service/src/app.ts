@@ -2,6 +2,7 @@ import express from "express" ;
 import interviewRoutes from "./routes/interview.route.js" ;
 import publicInterviewRoutes from "./routes/publicInterview.routes.js";
 import interviewQuestionRoutes from "./routes/interviewQuestion.routes.js";
+import interviewReportRoutes from "./routes/interviewReport.routes.js"
 
 const app = express() 
 
@@ -19,5 +20,7 @@ app.use("/api/v1/interviews", interviewRoutes) ;
 app.use("/api/v1/public/interviews", publicInterviewRoutes);
 
 app.use("/api/v1/public/interviews", interviewQuestionRoutes) ; 
+
+app.use("/api/v1/public/interviews/interview-report", interviewReportRoutes);
 
 export default app ; 

@@ -1,8 +1,12 @@
+
 import Interview, { InterviewStatus } from "../models/interview.model.js";
 import crypto from "crypto"
 
 export const createInterviewService = async (data: any) => {
-    return await Interview.create(data) ;
+    return await Interview.create({
+        ...data, 
+        totalQuestions: data.totalQuestions ?? 10, 
+    }) ;
 }
 
 export const getInterviewByIdService = async (id: string) => {
@@ -63,7 +67,7 @@ export const publishInterviewService = async (id: string) => {
 
     const accessToken = crypto.randomBytes(32).toString("hex") ; 
 
-    interview.status == InterviewStatus.PUBLISHED ; 
+    interview.status = InterviewStatus.PUBLISHED ; 
     interview.accessToken = accessToken ; 
 
     // optional: setting an expiry date in the future if needed 

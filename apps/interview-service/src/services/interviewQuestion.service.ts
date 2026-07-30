@@ -3,7 +3,7 @@ import InterviewQuestion, {
   GeneratedBy,
   QuestionType,
 } from "../models/interviewQuestion.model.js";
-import { generateNextQuestion } from "../helpers/questionGenerator.helper.js";
+import { evaluateCandidateAnswer, generateQuestion } from "../helpers/questionGenerator.helper.js";
 
 export const getFirstQuestionService = async (accessToken: string) => {
   // finding interview
@@ -44,12 +44,16 @@ export const getFirstQuestionService = async (accessToken: string) => {
 
   // first question - later this will come from AI LLM Model
 
+  const generatedQuestion = await generateQuestion({
+    interview,
+  });
+
   const firstQuestion = await InterviewQuestion.create({
     interviewId: interview._id,
     questionNumber: 1,
-    question: "Tell me about yourself",
-    type: QuestionType.HR,
-    generatedBy: GeneratedBy.SYSTEM,
+    question: generatedQuestion.question,
+    type: generatedQuestion.type,
+    generatedBy: GeneratedBy.AI,
   });
 
   return {
@@ -116,7 +120,38 @@ export const submitCandidateAnswerService = async (
 
   question.answeredAt = new Date();
 
+  // evaluating the submitted answer using AI 
+
+  const evaluation = await evaluateCandidateAnswer({
+    question: question.question, 
+    candidateAnswer
+  })
+
+  // saving AI evaluation 
+
+  question.score = evaluation.score ; 
+  question.feedback = evaluation.feedback ; 
+
+  // saving the updated question
+
   await question.save();
+
+  // updating the interview's overall score 
+  
+  const answeredQuestions = await InterviewQuestion.find({
+    interviewId: interview._id, 
+    score: {
+      $ne: null 
+    }
+  }) ; 
+
+  const totalScore = answeredQuestions.reduce(
+    (sum, question) => sum + (question.score ?? 0), 0,
+  )
+
+  interview.score = totalScore / answeredQuestions.length ; 
+
+  await interview.save() ; 
 
   return {
     success: true,
@@ -180,11 +215,28 @@ export const getNextQuestionService = async (accessToken: string) => {
     };
   }
 
+  const totalQuestions = await InterviewQuestion.countDocuments({
+    interviewId: interview._id 
+  }) ; 
+
+  if(totalQuestions >= interview.totalQuestions) {
+    interview.status = InterviewStatus.COMPLETED ; 
+
+    interview.completedAt = new Date() ; 
+
+    await interview.save() ; 
+
+    return {
+      success: true, 
+      interviewCompleted: true 
+    }
+  }
+
   const nextQuestionNumber = lastQuestion.questionNumber + 1;
 
-  // interview -> Previous question -> Candidate answer -> Job role -> experience -> skills -> Gemini/OpenAI LLM -> Generated Question 
+  // interview -> Previous question -> Candidate answer -> Job role -> experience -> skills -> Gemini/OpenAI LLM -> Generated Question
 
-  const nextQuestionText = await  generateNextQuestion({
+  const generatedQuestion = await generateQuestion({
     interview,
     previousQuestion: lastQuestion,
     previousAnswer: lastQuestion.candidateAnswer ?? "",
@@ -193,10 +245,12 @@ export const getNextQuestionService = async (accessToken: string) => {
   const nextQuestion = await InterviewQuestion.create({
     interviewId: interview._id,
     questionNumber: nextQuestionNumber,
-    question: nextQuestionText,
-    type: QuestionType.TECHNICAL,
-    generatedBy: GeneratedBy.SYSTEM,
+    question: generatedQuestion.question,
+    type: generatedQuestion.type,
+    generatedBy: GeneratedBy.AI,
   });
+
+  // checking whether the interview has reached its maximum number of questions 
 
   return {
     success: true,
@@ -259,3 +313,4 @@ export const submitInterviewService = async (accessToken: string) => {
     success: true,
   };
 };
+
