@@ -4,7 +4,7 @@ import path from "path";
 
 import { randomUUID } from "crypto"; 
 import File from "../models/file.model.js";
-import { uploadFileToS3 } from "../helpers/s3.helper.js";
+import { deleteFileFromS3, generateSignedUrl, uploadFileToS3 } from "../helpers/s3.helper.js";
 
 // uploading a file to S3, storing its metadata in MongoDB, and returns the saved document 
 
@@ -58,3 +58,52 @@ export const uploadFile = async (
     }) ;
     return savedFile ; 
 }
+
+// Deleting a file from S3 and MongoDB - later will add authorization as well to ensure only the owner/admin can delete 
+
+export const deleteFile = async (fileId: string) => {
+
+    const file = await File.findById(fileId);
+
+    if (!file) {
+        throw new Error("File not found.");
+    }
+
+    // Delete from S3
+    await deleteFileFromS3(file.key);
+
+    // Delete metadata from MongoDB
+    await file.deleteOne();
+
+    return;
+}
+
+// Get file by ID - returns file metadata by its ID - later in future authorization will ensure only permitted users can access the private files 
+
+export const getFileById = async (fileId: string) => {
+
+    const file = await File.findById(fileId);
+
+    if (!file) {
+        throw new Error("File not found.");
+    }
+
+    return file;
+}
+
+// returns a signed URL for a file - authorization will be added later on 
+
+export const getSignedUrlByFileId = async (fileId: string) => {
+
+    const file = await File.findById(fileId);
+
+    if (!file) {
+        throw new Error("File not found.");
+    }
+
+    const signedUrl = await generateSignedUrl(file.key);
+
+    return {
+        url: signedUrl,
+    };
+};

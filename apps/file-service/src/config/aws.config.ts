@@ -2,6 +2,12 @@ import {S3Client} from "@aws-sdk/client-s3" ;
 
 // AWS S3 Client used for uploading, downloading and deleting files 
 
+console.log({
+    region: process.env.AWS_REGION,
+    accessKey: process.env.AWS_ACCESS_KEY,
+    secretExists: !!process.env.AWS_SECRET_ACCESS_KEY,
+});
+
 const s3Client = new S3Client({
     region: process.env.AWS_REGION!, // AWS Region where our bucket is hosted. Requests are routed to this geographical location
 

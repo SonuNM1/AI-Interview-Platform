@@ -1,4 +1,5 @@
 import express from "express" ;
+import fileRoutes from "./routes/file.routes.js"
 
 const app = express() 
 
@@ -11,5 +12,8 @@ app.get("/health", (_req, res) => {
     })
 })
 
+// registering the route 
+
+app.use("/api/v1/files", fileRoutes);
 
 export default app ; 

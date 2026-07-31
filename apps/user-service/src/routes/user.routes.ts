@@ -1,6 +1,7 @@
 import { Router } from "express";
-import {createUser, deleteUserController, getMyProfile, getUser, updateUser} from "../controllers/user.controller.js";
+import {createUser, deleteUserController, getMyProfile, getUser, updateUser, uploadAvatarController, uploadResumeController} from "../controllers/user.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
+import upload from "../config/multer.config.js";
 
 const router = Router()
 
@@ -21,6 +22,12 @@ router.get("/:id", getUser)
 // delete user profile - deve only 
 
 router.delete("/delete-user/:id", deleteUserController)
+
+// updating the profile image 
+
+router.patch("/me/avatar",authMiddleware, upload.single("file"),uploadAvatarController);
+
+router.patch("/me/resume", authMiddleware, upload.single("file"), uploadResumeController) ; 
 
 // Authenticated 
 

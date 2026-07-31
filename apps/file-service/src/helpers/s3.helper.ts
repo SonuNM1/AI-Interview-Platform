@@ -1,8 +1,10 @@
 import {
     PutObjectCommand, 
-    DeleteObjectCommand
+    DeleteObjectCommand,
+    GetObjectCommand
 } from "@aws-sdk/client-s3"
 import s3Client from "../config/aws.config.js"
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // Uploads a file to AWS S3
 
@@ -42,3 +44,17 @@ export const deleteFileFromS3 = async (key: string) => {
 
     await s3Client.send(command) ;
 }
+
+// Generates a temporary signed URL for accessing a private file 
+
+export const generateSignedUrl = async (key: string) => {
+
+    const command = new GetObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET_NAME!,
+        Key: key,
+    });
+
+    return await getSignedUrl(s3Client, command, {
+        expiresIn: 60 * 5, // 5 minutes
+    });
+};
