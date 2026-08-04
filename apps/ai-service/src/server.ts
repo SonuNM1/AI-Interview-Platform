@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+console.log("OPENAI KEY:", process.env.OPENAI_API_KEY?.slice(0, 10));
+
 import app from "./app.js";
 import { connectDB } from "./config/db.js";
 

@@ -35,7 +35,9 @@ export const getConversationMessagesService = async (
   page: number = 1,
   limit: number = 20,
 ): Promise<MessageDocument[]> => {
-  return Message.find({
+  console.log("Conversation ID:", conversationId);
+
+  const messages = await Message.find({
     conversationId,
   })
     .sort({
@@ -43,6 +45,11 @@ export const getConversationMessagesService = async (
     })
     .skip((page - 1) * limit)
     .limit(limit);
+
+  console.log("Messages Found:", messages.length);
+  console.log(messages);
+
+  return messages;
 };
 
 // updates an existing message
@@ -115,12 +122,11 @@ export const sendMessageService = async (
   text: string,
   file?: Express.Multer.File,
 ): Promise<MessageDocument> => {
-
   const attachments: {
-    fileId: string; 
+    fileId: string;
     url: string;
     fileName: string;
-    mimeTyp: string 
+    mimeTyp: string;
   }[] = [];
 
   // Upload attachment to File Service
