@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import { AI_MODELS } from "../constants/ai.constants.js";
 import { MENTOR_SYSTEM_PROMPT } from "../prompts/mentor.system.prompt.js";
 
+let currentAbortController: AbortController | null = null;
+
 // creating an OpenAi client
 
 const getOpenAIClient = () => {
@@ -10,29 +12,57 @@ const getOpenAIClient = () => {
   });
 };
 
-// sends a prompt to OpenAI and returns the response
+// Sends conversation history to OpenAI and streams the response.
 
 export const generateResponse = async (
-    messages: {
-        role: "system" | "user" | "assistant";
-        content: string;
-    }[]
+  messages: {
+    role: "system" | "user" | "assistant";
+    content: string;
+  }[],
+  onToken?: (token: string) => void,
 ): Promise<string> => {
+  // controller used to cancel the current generation
 
-    const openai = getOpenAIClient();
+  const controller = new AbortController();
 
-    const completion =
-        await openai.chat.completions.create({
+  currentAbortController = controller;
 
-            model: AI_MODELS.DEFAULT,
+  const openai = getOpenAIClient();
 
-            messages: [
-                {
-                    role: "system",
-                    content: MENTOR_SYSTEM_PROMPT,
-                },
-                ...messages,
-            ],
-        });
-    return completion.choices[0].message.content ?? "";
+  const stream = await openai.chat.completions.create(
+    {
+      model: AI_MODELS.DEFAULT,
+      messages: [
+        {
+          role: "system",
+          content: MENTOR_SYSTEM_PROMPT,
+        },
+        ...messages,
+      ],
+      stream: true,
+    },
+    {
+      signal: controller.signal,
+    },
+  );
+
+  let finalResponse = "";
+
+  for await (const chunk of stream) {
+    const token = chunk.choices[0]?.delta?.content ?? "";
+
+    if (!token) continue;
+    finalResponse += token;
+    onToken?.(token);
+  }
+
+  currentAbortController = null;
+  return finalResponse;
+};
+
+// stops the current AI generation if one is running
+
+export const stopGeneration = () => {
+  currentAbortController?.abort();
+  currentAbortController = null;
 };

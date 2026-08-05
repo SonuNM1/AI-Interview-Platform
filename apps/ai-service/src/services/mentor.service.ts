@@ -1,31 +1,40 @@
 import { generateResponse } from "../providers/openai.provider.js";
-import { getConversationHistory } from "./chat-service.client.js";
+import {
+  getConversationHistory,
+  saveAIMessage,
+  saveUserMessage,
+} from "./chat-service.client.js";
 
 // generats an AI mentor response using previous conversation history
 
 export const generateMentorResponse = async (
   conversationId: string,
   message: string,
+  onToken: (token: string) => void 
 ) => {
-  const history = await getConversationHistory(conversationId); // Fetch previous messages
+  // Save current user's message
 
-  console.log("Conversation History:");
-  console.log(history);
+  await saveUserMessage(conversationId, "USER", message);
 
-  const messages: {
-    role: "user" | "assistant";
-    content: string;
-  }[] = history.map((msg: any) => ({
+  // fetch latest conversation history
+
+  const history = await getConversationHistory(conversationId);
+
+  const messages = history.map((msg: any) => ({
     role: msg.senderId === "AI_MENTOR" ? "assistant" : "user",
     content: msg.text,
   }));
 
-  // current user message
+  // Generate AI response while forwarding every token 
 
-  messages.push({
-    role: "user",
-    content: message,
-  });
+  const reply = await generateResponse(
+    messages, 
+    onToken,
+  )
 
-  return generateResponse(messages);
+  // Save AI reply
+  
+  await saveAIMessage(conversationId, reply);
+
+  return reply;
 };

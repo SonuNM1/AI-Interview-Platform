@@ -32,4 +32,14 @@ export const SOCKET_EVENTS = {
 
   GET_PRESENCE: "get_presence",
   PRESENCE: "presence",
+
+  // AI streaming events
+
+  AI_STREAM_START: "ai_stream_start",
+  AI_STREAM_TOKEN: "ai_stream_token",
+  AI_STREAM_END: "ai_stream_end",
+  AI_MENTOR_MESSAGE: "ai_mentor_message",
+
+  // Stop current AI generation
+  AI_STOP_GENERATION: "ai_stop_generation",
 } as const;

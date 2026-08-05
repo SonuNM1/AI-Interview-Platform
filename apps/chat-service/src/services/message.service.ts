@@ -41,7 +41,7 @@ export const getConversationMessagesService = async (
     conversationId,
   })
     .sort({
-      createdAt: -1,
+      createdAt: 1,
     })
     .skip((page - 1) * limit)
     .limit(limit);

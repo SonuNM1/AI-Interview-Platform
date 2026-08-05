@@ -6,6 +6,7 @@ import {
   editMessageService,
 } from "../services/message.service.js";
 import { lastSeenUsers, onlineUsers } from "../utils/presence.js";
+import { streamAIResponse } from "../services/ai-service.client.js";
 
 // register all socket events
 
@@ -26,12 +27,11 @@ export const registerSocketEvents = (io: Server) => {
     // marks a user online
 
     socket.on(SOCKET_EVENTS.USER_CONNECTED, ({ userId }) => {
-
       // save online user
 
       onlineUsers.set(userId, socket.id);
 
-      // user is online again 
+      // user is online again
 
       lastSeenUsers.delete(userId);
 
@@ -112,6 +112,49 @@ export const registerSocketEvents = (io: Server) => {
         userId,
       });
     });
+
+    // generates an AI mentor response and streams it to the conversation
+
+    socket.on(
+      SOCKET_EVENTS.AI_MENTOR_MESSAGE,
+      async ({ conversationId, message }) => {
+
+        console.log("✅ AI_MENTOR_MESSAGE received");
+
+        try {
+          await streamAIResponse(
+            conversationId,
+
+            message,
+
+            // Notify clients that AI has started replying.
+
+            () => {
+              io.to(conversationId).emit(SOCKET_EVENTS.AI_STREAM_START);
+            },
+
+            // Forward every generated token immediately.
+
+            (token) => {
+              io.to(conversationId).emit(SOCKET_EVENTS.AI_STREAM_TOKEN, {
+                conversationId,
+                token,
+              });
+            },
+
+            // Notify clients that streaming has finished.
+
+            () => {
+              io.to(conversationId).emit(SOCKET_EVENTS.AI_STREAM_END, {
+                conversationId,
+              });
+            },
+          );
+        } catch (error) {
+          console.error("AI streaming error:", error);
+        }
+      },
+    );
 
     // handles editing a message
 
