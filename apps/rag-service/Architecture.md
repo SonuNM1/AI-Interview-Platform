@@ -821,3 +821,120 @@ Let's think in terms of the direction.
 Because you're not looking for an exact match. 
 
 You're looking for the most similar vector, which requires specialized indexing and search algorithms. 
+
+
+# Are RAG, Tool Calling, MCP, and Agents Connected? 
+
+Yes, they are related because they are all components used to build modern AI applications. However, they solve different problems. You can think of them as different capabilities that an AI application may or may not use depending on the use case. 
+
+- RAG helps an AI access external knowledge.  Tool calling helps an AI perform actions. Agents help an AI plan and coordinate multiple steps. 
+
+    MCP provides a standardized way to connect AI to external tools and services. 
+
+- A single AI application can use one of these, several of them, or all of them together. 
+
+
+# Tool Calling 
+
+- Tool calling (also called Function Calling) is the ability of an LLM to request the execution of a function instead of generating a text response. 
+
+- By default, an LLM can only generate text. It cannot check the current weather, query a database, send an email, or book a meeting. Those operations require access to external systems. 
+
+- With tool calling, we define a set of functions that our application exposes. During a conversation, if the model determines that one of these functions is needed to answer the user's request, it returns a structured function call instead of a normal text response. Your backend executes the function, collects the result, and sends that result back to the model so it can generate the final answer. 
+
+- For example, if the user asks "What's the weather in Delhi?", the model doesn't know the live weather. Instead, it requests a call to a function such as `getWeather("Delhi")`. Your Node.js backend executes that function, receives the weather data from an API, and provides it to the model. The model then replies using the live data. 
+
+- Tool calling is therefore about giving an LLM the ability to interact with external systems, not about giving it knowledge. 
+
+### How is Tool Calling Different from RAG? 
+
+Although both involve external data, they solve completely different problems.
+
+- RAG retrieves information from a knowledge source, such as PDFs, documentation, or a vector database. The retrieved information becomes part of the prompt sent to the LLM.
+
+- Tool calling, on the other hand, executes an operation. That operation might fetch live weather, create a calendar event, query a database, send an email, or update a CRM.
+
+- A simple way to distinguish them is this:
+
+    If the AI needs to read information, it uses RAG.
+
+    If the AI needs to do something, it uses tool calling.
+
+
+# AI Agents 
+
+- An AI agent is an application that allows an LLM to reason about a task, decide what actions are required, and use one or more tools to complete that task.
+
+- Unlike a simple chatbot that receives a question and immediately produces an answer, an agent can perform multiple intermediate steps before responding.
+
+- For example, suppose a user asks: "Plan my business trip to Bangalore next week."
+
+    A normal chatbot may simply generate an itinerary from its existing knowledge.
+
+- An AI agent may instead decide to:
+
+    Check flight availability.
+    Search for hotels.
+    Check the weather forecast.
+    Read the user's calendar.
+    Create a travel schedule.
+    Present the final plan.
+
+
+# MCP (Model Context Protocol)
+
+MCP is an open standard that defines how AI applications communicate with external tools and data sources. 
+
+- Before MCP, every AI application needed custom code to integrate with services such as GitHub, Slack, PostgreSQL, Google Drive, or Gmail. Every integration had its own API, authentication method, and implementation. 
+
+- MCP standardizes this communication. Instead of every AI provider building different integrations for every service, MCP defines a common protocol that both AI applications and external services can understand. 
+
+- You can think of MCP as being similar to HTTP for web applications for web communication or JDBC for Java Database Connectivity. It doesn't replace APIs; it provides a standard way for AI systems to discover and use them. 
+
+### How Everything Works Together 
+
+In a production AI application, these technologies often work together rather than replacing one another. 
+
+- Suppose a user asks: "According to our HR policy, apply casual leave for tomorrow" 
+
+    The application may first use RAG to retrieve the company's leave policy from its documentation. After reading the policy, the LLM decides that it has enough information to proceed. It then uses tool calling to invoke the company's leave management API and submit the leave request. If the application is designed as an AI agent, it can decide this sequence of steps automatically. If the leave management system is exposed through MCP, the agent can access it using the standardized protocol rather than a custom integration. 
+
+
+## How is Tool Calling actually Implemented? 
+
+There is no special framework required. Tool calling is a feature provided by the LLM API (OpenAI, Anthropic, Gemini, etc). 
+
+- For Example: As a Full Stack Developer, we write normal backend functions. In your Node.js application we might have: 
+
+```js
+async function getWeather(city: string) {
+  // Call weather API
+}
+
+async function createMeeting(date: string) {
+  // Google Calendar API
+}
+
+async function sendEmail(to: string, subject: string) {
+  // Gmail API
+}
+```
+
+- When we make a request to an LLM, we also send a description of these functions (their names, parameters and what they do)
+
+- The LLM never executes the code, the backend executes the code. The LLM only decided which function should be called. 
+
+### Do Frameworks help? 
+
+Yes. Without frameworks, we write the orchestration by ourself. 
+
+- Popular options include: OpenAI Agents SDK, LangGraph, Google ADK, Crew AI, LlamaIndex Workflows 
+
+    These frameworks make multi-step workflows easier, but they still rely on the same underlying idea; the LLM requests a tool, and your application executes it. 
+
+
+## How is MCP implemented? 
+
+# LangChain & LangGraph 
+
+# Hugging Face 

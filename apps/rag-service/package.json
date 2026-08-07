@@ -1,0 +1,36 @@
+{
+  "name": "rag-service",
+  "version": "1.0.0",
+  "description": "RAG Service for AI Interview Platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@types/form-data": "^2.5.2",
+    "axios": "^1.18.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "form-data": "^4.0.6",
+    "mammoth": "^1.12.0",
+    "mongoose": "^9.8.0",
+    "multer": "^2.2.0",
+    "openai": "^7.0.0",
+    "unpdf": "^1.8.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^26.1.0",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3"
+  }
+}
