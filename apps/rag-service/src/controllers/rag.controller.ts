@@ -46,8 +46,7 @@ export const searchDocumentsController = async (
   }
 };
 
-// Streams the RAG answer token-by-token to the client
-
+// Streams the RAG answer and sends the sources used at the end.
 export const searchDocumentsStreamController = async (
   req: Request,
   res: Response,
@@ -62,22 +61,52 @@ export const searchDocumentsStreamController = async (
       });
     }
 
-    // tell the client we'll stream text
+    // Telling the browser that this is an SSE connection
 
-    res.setHeader("Content-Type", "text/plain");
-    res.setHeader("Transfer-Encoding", "chunked");
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
-    // generate the RAG answer and write each token immediately
+    // Generate and stream the answer
 
     const chunks = await searchDocumentsStream(question, (token) => {
-      res.write(token);
+      res.write(`event: answer\ndata: ${JSON.stringify(token)}\n\n`);
     });
 
-    res.end(); // tell Node that streaming is finished
+    // Send citation information after the AI finishes generating
 
-    console.log(`✅ ${chunks.length} citations available`);
+    for (const chunk of chunks) {
+      res.write(
+        `event: citation\ndata: ${JSON.stringify({
+          documentId: chunk.documentId,
+          fileName: chunk.fileName,
+          chunkIndex: chunk.chunkIndex,
+          score: chunk.score,
+        })}\n\n`,
+      );
+    }
+
+    // tell the frontend that everything is finished
+
+    res.write(
+      `event: done\ndata: ${JSON.stringify({
+        success: true,
+      })}\n\n`,
+    );
+
+    res.end();
+
+    console.log("✅ SSE stream completed.");
   } catch (error) {
-    console.error("RAG Streaming error: ", error);
+    console.error("RAG Streaming Error:", error);
+
+    // Send an SSE error event if possible.
+
+    res.write(
+      `event: error\ndata: ${JSON.stringify({
+        message: "Failed to generate RAG response",
+      })}\n\n`,
+    );
 
     res.end();
   }
