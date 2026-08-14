@@ -28,12 +28,19 @@ export const createMockInterviewService = async (
   return mockInterview;
 };
 
-// start the mock interview and generates the first question from the resume
+// Submit the candidate's transcribed voice answer after verifying ownership 
 
-export const startMockInterviewService = async (mockinterviewId: string) => {
-  // find the mock interview
+export const startMockInterviewService = async (
+  mockInterviewId: string,
+  userId: string,
+) => {
 
-  const mockInterview = await MockInterview.findById(mockinterviewId);
+  // Find the mock interview belonging to the authenticated user.
+  
+  const mockInterview = await MockInterview.findOne({
+    _id: mockInterviewId,
+    userId,
+  });
 
   if (!mockInterview) {
     return {
@@ -42,8 +49,8 @@ export const startMockInterviewService = async (mockinterviewId: string) => {
     };
   }
 
-  // Prevent starting an already running/completed interview
-
+  // Prevent starting an already running interview.
+  
   if (mockInterview.status === MockInterviewStatus.IN_PROGRESS) {
     return {
       success: false,
@@ -51,6 +58,8 @@ export const startMockInterviewService = async (mockinterviewId: string) => {
     };
   }
 
+  // Prevent restarting a completed interview.
+  
   if (mockInterview.status === MockInterviewStatus.COMPLETED) {
     return {
       success: false,
@@ -58,23 +67,23 @@ export const startMockInterviewService = async (mockinterviewId: string) => {
     };
   }
 
-  // Generate question 1
-
+  // Generate the first question from the user's resume.
+  
   const question = await generateNextQuestion(
     mockInterview.documentId.toString(),
     1,
   );
 
-  // save question 1
-
+  // Save the generated question.
+  
   const savedQuestion = await MockInterviewQuestion.create({
     mockInterviewId: mockInterview._id,
     questionNumber: 1,
     question,
   });
 
-  // start interview
-
+  // Mark the mock interview as started.
+  
   mockInterview.status = MockInterviewStatus.IN_PROGRESS;
   mockInterview.currentQuestion = 1;
   mockInterview.startedAt = new Date();
@@ -242,11 +251,13 @@ export const submitMockInterviewAnswerService = async (
 
 
 export const getMockInterviewService = async (
-  mockInterviewId: string 
+  mockInterviewId: string, 
+  userId: string 
 ) => {
-  const mockInterview = await MockInterview.findById(
-    mockInterviewId
-  )
+  const mockInterview = await MockInterview.findOne({
+    _id: mockInterviewId, 
+    userId 
+  })
 
   if(!mockInterview) {
     return {

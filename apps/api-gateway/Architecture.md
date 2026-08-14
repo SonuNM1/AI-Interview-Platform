@@ -163,3 +163,59 @@ However:
 - Harder to version APIs.
 
 As the number of services grows, maintenance becomes increasingly difficult.
+
+- API Gateway isn't only for authentication. It acts as the front door of our entire backend: 
+
+                    CLIENT
+                      ↓
+                API GATEWAY
+          ┌───────────┼───────────┐
+          ↓           ↓           ↓
+        Auth        Mock        Chat
+       Service    Interview    Service
+                    ↓
+                   RAG
+                    ↓
+                    AI
+
+
+**Typical Responsibilities**
+
+- Authentication - verify JWT
+- Authorization / routing - decide where request goes 
+- Rate limiting - prevent abuse 
+- CORS
+- Request validation 
+- Request/response logging 
+- Load balancing 
+- API versioning 
+- SSL/TLS termination 
+- Hide internal service URLs/ports
+- Potentially response transformation 
+
+- Without API Gateway: Clients might do 
+
+```js
+Frontend → Auth :5000
+Frontend → Mock :5008
+Frontend → RAG :5007
+Frontend → Chat :5004
+Frontend → AI :5005
+```
+
+     Now every service becomes exposed and the frontend needs to know your entire backend architecture. 
+
+- With API Gateway: 
+
+Frontend
+   ↓
+api.example.com
+   ↓
+Gateway
+   ├── /auth/*
+   ├── /mock-interviews/*
+   ├── /chat/*
+   ├── /files/*
+   └── /interviews/*
+
+   The frontend only knows one backend entry point. 

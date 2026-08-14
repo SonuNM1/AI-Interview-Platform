@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { createMockInterview, getMockInterview, startMockInterview, submitMockInterviewAnswer } from "../controllers/mockInterview.controller.js";
+import { uploadAudio } from "../middleware/upload.middleware.js";
 
 const router = Router() ; 
 
@@ -11,7 +12,7 @@ router.post("/", createMockInterview) ;
 
 router.post("/:id/start", startMockInterview);
 
-router.post("/:id/answer", submitMockInterviewAnswer);
+router.post("/:id/answer", uploadAudio.single("audio"), submitMockInterviewAnswer);
 
 router.get("/:id", getMockInterview);
 

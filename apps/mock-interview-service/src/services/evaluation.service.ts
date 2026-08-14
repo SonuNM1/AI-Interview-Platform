@@ -1,23 +1,32 @@
 import openai from "../providers/openai.provider.js";
 
-export const evaluateAnswer = async (question: string, answer: string) => {
-  const completion = await openai.chat.completions.create({
-    model: process.env.OPENAI_MODEL!,
+export const evaluateAnswer = async (
+  question: string,
+  answer: string,
+) => {
+  try {
+    const completion =
+      await openai.chat.completions.create(
+        {
+          model: process.env.OPENAI_MODEL!,
 
-    messages: [
-      {
-        role: "system",
-        content: `
-You are a fair and realistic human interviewer evaluating a candidate's answer.
+          messages: [
+            {
+              role: "system",
 
-Your goal is to determine whether the candidate understands the topic,
-NOT whether they gave a perfect or exhaustive answer.
+              content: `
+You are a fair and realistic human interviewer evaluating
+a candidate's answer.
+
+Your goal is to determine whether the candidate understands
+the topic, NOT whether they gave a perfect or exhaustive answer.
 
 IMPORTANT:
 
 A candidate is NOT expected to mention every possible detail.
 
 If the candidate:
+
 - Understands the main concept,
 - Gives a technically reasonable explanation,
 - Describes a practical approach,
@@ -28,6 +37,7 @@ give them a GOOD score even if some secondary details are missing.
 Do NOT search for reasons to reduce the score.
 
 Do NOT deduct points simply because the candidate did not mention:
+
 - Advanced techniques
 - Edge cases
 - Monitoring tools
@@ -38,12 +48,13 @@ Do NOT deduct points simply because the candidate did not mention:
 - Every detail an expert might mention
 
 Only reduce the score significantly when there is:
-- A factual/technical mistake
+
+- A factual or technical mistake
 - A major misunderstanding
 - An answer that only partially addresses the main question
 - An answer that is mostly unrelated
 
-Scoring:
+SCORING:
 
 9-10:
 Excellent understanding. Correct, practical and well explained.
@@ -52,8 +63,8 @@ Excellent understanding. Correct, practical and well explained.
 Very good answer. Correct understanding with only minor missing details.
 
 7:
-Good answer. Correct main idea and practical understanding, with some
-secondary details missing.
+Good answer. Correct main idea and practical understanding,
+with some secondary details missing.
 
 6:
 Reasonable/basic answer but has noticeable gaps in the main concept.
@@ -75,8 +86,11 @@ If the candidate gives a correct practical answer to the main question,
 prefer a score of 7 or higher.
 
 Feedback should be encouraging and constructive.
-Mention what was done well FIRST, then optionally mention one or two
-things that could make the answer stronger.
+
+Mention what was done well FIRST.
+
+Then optionally mention ONE or TWO things that could make
+the answer stronger.
 
 Do NOT turn the feedback into a long list of missing concepts.
 
@@ -86,11 +100,13 @@ Return ONLY valid JSON:
   "score": 0,
   "feedback": ""
 }
-`
-      },
-      {
-        role: "user",
-        content: `
+              `,
+            },
+
+            {
+              role: "user",
+
+              content: `
 Question:
 ${question}
 
@@ -98,20 +114,60 @@ Candidate Answer:
 ${answer}
 
 Evaluate this answer.
-        `,
-      },
-    ],
+              `,
+            },
+          ],
 
-    response_format: {
-      type: "json_object",
-    },
-  });
+          response_format: {
+            type: "json_object",
+          },
+        },
+        {
+          timeout: 20000,
+        },
+      );
 
-  const result = completion.choices[0]?.message?.content;
+    const result =
+      completion.choices[0]?.message?.content;
 
-  if (!result) {
-    throw new Error("Failed to evaluate candidate answer");
+    if (!result) {
+      throw new Error(
+        "AI returned an empty evaluation",
+      );
+    }
+
+    const parsed = JSON.parse(result);
+
+    if (
+      typeof parsed.score !== "number" ||
+      typeof parsed.feedback !== "string"
+    ) {
+      throw new Error(
+        "Invalid AI evaluation response",
+      );
+    }
+
+    if (
+      parsed.score < 0 ||
+      parsed.score > 10
+    ) {
+      throw new Error(
+        "AI returned an invalid score",
+      );
+    }
+
+    return {
+      score: parsed.score,
+      feedback: parsed.feedback,
+    };
+  } catch (error) {
+    console.error(
+      "Answer evaluation failed:",
+      error,
+    );
+
+    throw new Error(
+      "Unable to evaluate candidate answer",
+    );
   }
-
-  return JSON.parse(result);
 };

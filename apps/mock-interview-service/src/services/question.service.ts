@@ -1,8 +1,7 @@
 import axios from "axios";
 import openai from "../providers/openai.provider.js";
 
-// Fixed interview structure.
-// Each question tests a different area.
+// Fixed interview structure - Each question tests a different area.
 const QUESTION_FOCUS = [
   "Professional work experience, responsibilities, problem solving and engineering decisions",
 
@@ -14,7 +13,6 @@ const QUESTION_FOCUS = [
 
   "Cloud and DevOps: AWS, Docker, CI/CD, deployment and production systems",
 ];
-
 
 // Generates one interview question for the given question number.
 export const generateNextQuestion = async (
@@ -30,37 +28,52 @@ export const generateNextQuestion = async (
 
   const focus = QUESTION_FOCUS[questionNumber - 1];
 
-  // Get resume information relevant to the current interview area.
-  const ragResponse = await axios.post(
-    `${process.env.RAG_SERVICE_URL}/api/v1/rag/search`,
-    {
-      question: `
+  try {
+    // Get resume information relevant to the current interview area.
+    const ragResponse = await axios.post(
+      `${process.env.RAG_SERVICE_URL}/api/v1/rag/search`,
+      {
+        question: `
 Find information from this candidate's resume that helps determine
 their experience and skill level for the following interview area:
 
 ${focus}
-      `,
-      documentId,
-    },
-  );
+        `,
+        documentId,
+      },
+      {
+        timeout: 10000,
+      },
+    );
 
-  const chunks = ragResponse.data.data.chunks;
+    const chunks = ragResponse.data?.data?.chunks;
 
-  const context = chunks
-    .map((chunk: any) => chunk.text)
-    .join("\n\n");
+    if (!Array.isArray(chunks) || chunks.length === 0) {
+      throw new Error(
+        "RAG service returned no relevant resume information",
+      );
+    }
 
+    const context = chunks
+      .map((chunk: any) => chunk.text)
+      .filter(Boolean)
+      .join("\n\n");
 
-  // Generate exactly one question.
-  const completion =
-    await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL!,
+    if (!context.trim()) {
+      throw new Error("Resume context is empty");
+    }
 
-      messages: [
+    // Generate exactly one question.
+    const completion =
+      await openai.chat.completions.create(
         {
-          role: "system",
+          model: process.env.OPENAI_MODEL!,
 
-          content: `
+          messages: [
+            {
+              role: "system",
+
+              content: `
 You are a professional human interviewer conducting
 a technical mock interview.
 
@@ -113,28 +126,42 @@ IMPORTANT RULES:
 Candidate resume information:
 
 ${context}
-          `,
-        },
+              `,
+            },
 
-        {
-          role: "user",
+            {
+              role: "user",
 
-          content: `
+              content: `
 Generate interview question ${questionNumber}
 according to the assigned focus.
-          `,
+              `,
+            },
+          ],
         },
-      ],
-    });
+        {
+          timeout: 20000,
+        },
+      );
 
-  const question =
-    completion.choices[0]?.message?.content?.trim();
+    const question =
+      completion.choices[0]?.message?.content?.trim();
 
-  if (!question) {
+    if (!question) {
+      throw new Error(
+        "AI returned an empty interview question",
+      );
+    }
+
+    return question;
+  } catch (error) {
+    console.error(
+      `Failed to generate question ${questionNumber}:`,
+      error,
+    );
+
     throw new Error(
-      "Failed to generate interview question",
+      `Unable to generate interview question ${questionNumber}`,
     );
   }
-
-  return question;
 };

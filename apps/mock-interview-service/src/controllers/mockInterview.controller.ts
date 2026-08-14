@@ -7,6 +7,7 @@ import {
   startMockInterviewService,
   submitMockInterviewAnswerService,
 } from "../services/mockInterview.service.js";
+import { transcribeCandidateAudio } from "../services/transcription.service.js";
 
 export const createMockInterview = async (req: Request, res: Response) => {
   try {
@@ -40,8 +41,16 @@ export const createMockInterview = async (req: Request, res: Response) => {
 export const startMockInterview = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
+    const userId = req.headers["x-user-id"] as string;
 
-    const result = await startMockInterviewService(id);
+     if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+    }
+
+    const result = await startMockInterviewService(id, userId);
 
     if (!result.success) {
       return res.status(400).json(result);
@@ -62,29 +71,50 @@ export const submitMockInterviewAnswer = async (
   res: Response,
 ) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params; // extracting the mock interview ID from the URL 
 
-    const { answer, answerTranscript, duration } = req.body;
+    const audioFile = req.file ; // multer places the uploaded file inside req.file 
 
-    if (!answer) {
+    // duration is sent as a normal multipart/form-data filed 
+
+    const duration = req.body.duration ? Number(req.body.duration) : undefined ; 
+
+    // making sure the candidate actually submitted an audio recording 
+
+    if(!audioFile) {
       return res.status(400).json({
         success: false,
-        message: "Answer is required",
+        message: "Audio answer is required",
       });
     }
 
-    const result = await submitMockInterviewAnswerService(
-      id as string,
-      answer,
-      answerTranscript,
-      duration,
-    );
+    // converting the candidate's speech into text before evaluation 
 
-    if (!result.success) {
-      return res.status(400).json(result);
+    const answerTranscript = await transcribeCandidateAudio(
+      audioFile.buffer, 
+      audioFile.originalname, 
+      audioFile.mimetype 
+    )
+
+    // for now the transcript is also used as the candidate asnwer, this keeps the existing evaluation pipeline unchanged 
+
+    const result = await submitMockInterviewAnswerService(
+      id as string, 
+      answerTranscript, 
+      answerTranscript, 
+      duration 
+    )
+
+    // return validation/business errors from the service 
+
+    if(!result.success) {
+      return res.status(400).json(result) ; 
     }
 
-    return res.status(200).json(result);
+    // reutnr the evaluation and next question to the client 
+
+    return res.status(200).json(result)
+
   } catch (error: any) {
     console.error("Submit Mock Interview Answer Error:", error);
 
@@ -99,7 +129,16 @@ export const getMockInterview = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await getMockInterviewService(id);
+    const userId = req.headers["x-user-id"] as string;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+    }
+
+    const result = await getMockInterviewService(id, userId);
 
     if (!result.success) {
       return res.status(404).json(result);
