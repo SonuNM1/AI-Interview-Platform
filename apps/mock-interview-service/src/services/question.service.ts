@@ -19,17 +19,16 @@ export const generateNextQuestion = async (
   documentId: string,
   questionNumber: number,
 ) => {
-  if (
-    questionNumber < 1 ||
-    questionNumber > QUESTION_FOCUS.length
-  ) {
+  if (questionNumber < 1 || questionNumber > QUESTION_FOCUS.length) {
     throw new Error("Invalid question number");
   }
 
   const focus = QUESTION_FOCUS[questionNumber - 1];
 
   try {
+    
     // Get resume information relevant to the current interview area.
+
     const ragResponse = await axios.post(
       `${process.env.RAG_SERVICE_URL}/api/v1/rag/search`,
       {
@@ -38,7 +37,7 @@ Find information from this candidate's resume that helps determine
 their experience and skill level for the following interview area:
 
 ${focus}
-        `,
+`,
         documentId,
       },
       {
@@ -49,9 +48,7 @@ ${focus}
     const chunks = ragResponse.data?.data?.chunks;
 
     if (!Array.isArray(chunks) || chunks.length === 0) {
-      throw new Error(
-        "RAG service returned no relevant resume information",
-      );
+      throw new Error("RAG service returned no relevant resume information");
     }
 
     const context = chunks
@@ -64,16 +61,15 @@ ${focus}
     }
 
     // Generate exactly one question.
-    const completion =
-      await openai.chat.completions.create(
-        {
-          model: process.env.OPENAI_MODEL!,
+    const completion = await openai.chat.completions.create(
+      {
+        model: process.env.OPENAI_MODEL!,
 
-          messages: [
-            {
-              role: "system",
+        messages: [
+          {
+            role: "system",
 
-              content: `
+            content: `
 You are a professional human interviewer conducting
 a technical mock interview.
 
@@ -127,41 +123,33 @@ Candidate resume information:
 
 ${context}
               `,
-            },
+          },
 
-            {
-              role: "user",
+          {
+            role: "user",
 
-              content: `
+            content: `
 Generate interview question ${questionNumber}
 according to the assigned focus.
               `,
-            },
-          ],
-        },
-        {
-          timeout: 20000,
-        },
-      );
+          },
+        ],
+      },
+      {
+        timeout: 20000,
+      },
+    );
 
-    const question =
-      completion.choices[0]?.message?.content?.trim();
+    const question = completion.choices[0]?.message?.content?.trim();
 
     if (!question) {
-      throw new Error(
-        "AI returned an empty interview question",
-      );
+      throw new Error("AI returned an empty interview question");
     }
 
     return question;
   } catch (error) {
-    console.error(
-      `Failed to generate question ${questionNumber}:`,
-      error,
-    );
+    console.error(`Failed to generate question ${questionNumber}:`, error);
 
-    throw new Error(
-      `Unable to generate interview question ${questionNumber}`,
-    );
+    throw new Error(`Unable to generate interview question ${questionNumber}`);
   }
 };

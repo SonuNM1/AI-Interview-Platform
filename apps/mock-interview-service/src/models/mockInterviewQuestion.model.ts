@@ -11,6 +11,7 @@ export interface IMockInterviewQuestion extends Document {
   askedAt: Date;
   answeredAt?: Date;
   duration?: number;
+  answerProcessing?: boolean;
 }
 
 const mockInterviewQuestionSchema = new Schema(
@@ -75,6 +76,14 @@ const mockInterviewQuestionSchema = new Schema(
       default: Date.now,
     },
     answeredAt: Date,
+
+    // prevents two simultaneous requests from processing the same answer
+
+    answerProcessing: {
+      type: Boolean, 
+      default: false 
+    },
+
     duration: Number,
   },
   {
@@ -83,6 +92,7 @@ const mockInterviewQuestionSchema = new Schema(
 );
 
 // Prevent duplicate question numbers inside one mock interview.
+
 mockInterviewQuestionSchema.index(
   {
     mockInterviewId: 1,

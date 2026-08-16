@@ -5,14 +5,14 @@ import {
   searchDocumentsStream,
 } from "../services/rag.service.js";
 
-// searches the uploaded documents using semantic search
+// searches the uploaded documents using semantic search - if documentId is provided, search is restricted to that document
 
 export const searchDocumentsController = async (
   req: Request,
   res: Response,
 ) => {
   try {
-    const { question } = req.body;
+    const { question, documentId } = req.body;
 
     if (!question) {
       return res.status(400).json({
@@ -21,9 +21,9 @@ export const searchDocumentsController = async (
       });
     }
 
-    // retrieve the most relevant chunks
+    // retrieve the most relevant chunks - documentId is optional, so existing RAG requests still work
 
-    const chunks = await searchDocuments(question);
+    const chunks = await searchDocuments(question, documentId);
 
     // generate the final answer using those chunks
 
@@ -47,12 +47,13 @@ export const searchDocumentsController = async (
 };
 
 // Streams the RAG answer and sends the sources used at the end.
+
 export const searchDocumentsStreamController = async (
   req: Request,
   res: Response,
 ) => {
   try {
-    const { question } = req.body;
+    const { question, documentId } = req.body;
 
     if (!question) {
       return res.status(400).json({
@@ -67,11 +68,15 @@ export const searchDocumentsStreamController = async (
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    // Generate and stream the answer
+    // Generate and stream the answer - documentId is optional for backward compatibility
 
-    const chunks = await searchDocumentsStream(question, (token) => {
-      res.write(`event: answer\ndata: ${JSON.stringify(token)}\n\n`);
-    });
+    const chunks = await searchDocumentsStream(
+      question,
+      (token) => {
+        res.write(`event: answer\ndata: ${JSON.stringify(token)}\n\n`);
+      },
+      documentId,
+    );
 
     // Send citation information after the AI finishes generating
 

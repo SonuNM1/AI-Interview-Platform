@@ -99,7 +99,7 @@ export const startMockInterviewService = async (
   };
 };
 
-// Submits an answer, evaluates it, and generates the next question.
+// Submits an answer, evaluates it, and generates the next question safely
 
 export const submitMockInterviewAnswerService = async (
   mockInterviewId: string,
@@ -107,8 +107,7 @@ export const submitMockInterviewAnswerService = async (
   answerTranscript?: string,
   duration?: number,
 ) => {
-  // Find mock interview
-
+  // Find the mock interview.
   const mockInterview = await MockInterview.findById(mockInterviewId);
 
   if (!mockInterview) {
@@ -118,6 +117,7 @@ export const submitMockInterviewAnswerService = async (
     };
   }
 
+  // The interview must currently be running.
   if (mockInterview.status !== MockInterviewStatus.IN_PROGRESS) {
     return {
       success: false,
@@ -125,8 +125,7 @@ export const submitMockInterviewAnswerService = async (
     };
   }
 
-  // Find current question
-
+  // Find the question currently being answered.
   const currentQuestion = await MockInterviewQuestion.findOne({
     mockInterviewId: mockInterview._id,
     questionNumber: mockInterview.currentQuestion,
@@ -139,116 +138,164 @@ export const submitMockInterviewAnswerService = async (
     };
   }
 
-  // Prevent duplicate answer submission
+  // Atomically claim this question for processing.
+  //
+  // Only one request can change answerProcessing from false to true.
+  // This prevents two simultaneous requests from evaluating the same answer.
+  const claimedQuestion = await MockInterviewQuestion.findOneAndUpdate(
+    {
+      _id: currentQuestion._id,
+      answeredAt: { $exists: false },
+      answerProcessing: false,
+    },
+    {
+      $set: {
+        answerProcessing: true,
+      },
+    },
+    {
+      new: true,
+    },
+  );
 
-  if (currentQuestion.answeredAt) {
+  // Another request already submitted or is currently processing this answer.
+  if (!claimedQuestion) {
     return {
       success: false,
-      message: "Answer has already been submitted",
+      message: "Answer is already being processed or has already been submitted",
     };
   }
 
-  // Evaluate candidate answer
+  try {
+    // Evaluate the candidate's answer using OpenAI.
+    const evaluation = await evaluateAnswer(
+      claimedQuestion.question,
+      answer,
+    );
 
-  const evaluation = await evaluateAnswer(currentQuestion.question, answer);
+    // If this is the final question, generate the report before
+    // marking the interview as completed.
+    if (
+      mockInterview.currentQuestion >=
+      mockInterview.totalQuestions
+    ) {
+      // Save the candidate's answer and evaluation first.
+      claimedQuestion.candidateAnswer = answer;
+      claimedQuestion.answerTranscript = answerTranscript;
+      claimedQuestion.duration = duration;
+      claimedQuestion.score = evaluation.score;
+      claimedQuestion.feedback = evaluation.feedback;
+      claimedQuestion.answeredAt = new Date();
+      claimedQuestion.answerProcessing = false;
 
-  // Save candidate answer
+      await claimedQuestion.save();
 
-  currentQuestion.candidateAnswer = answer;
-  currentQuestion.answerTranscript = answerTranscript;
-  currentQuestion.duration = duration;
-  currentQuestion.score = evaluation.score;
-  currentQuestion.feedback = evaluation.feedback;
+      // Check whether a report already exists.
+      const existingReport = await MockInterviewReport.findOne({
+        mockInterviewId: mockInterview._id,
+      });
 
-  currentQuestion.answeredAt = new Date();
+      let savedReport = existingReport;
 
-  await currentQuestion.save();
+      // Generate the report only if it doesn't already exist.
+      if (!savedReport) {
+        const report = await generateMockInterviewReport(
+          mockInterview._id.toString(),
+        );
 
-  // Check whether all questions are completed
+        savedReport = await MockInterviewReport.create({
+          mockInterviewId: mockInterview._id,
+          overallScore: report.overallScore,
+          strengths: report.strengths,
+          weaknesses: report.weaknesses,
+          summary: report.summary,
+          recommendation: report.recommendation,
+        });
+      }
 
-  if (mockInterview.currentQuestion >= mockInterview.totalQuestions) {
-    // Mark interview as completed
-    mockInterview.status = MockInterviewStatus.COMPLETED;
-    mockInterview.completedAt = new Date();
+      // Only mark the interview completed after the report succeeds.
+      mockInterview.status = MockInterviewStatus.COMPLETED;
+      mockInterview.completedAt = new Date();
 
-    await mockInterview.save();
+      await mockInterview.save();
 
-    // Check if report already exists
-    const existingReport = await MockInterviewReport.findOne({
-      mockInterviewId: mockInterview._id,
-    });
-
-    if (existingReport) {
       return {
         success: true,
         interviewCompleted: true,
         data: {
-          report: existingReport,
+          evaluation,
+          report: savedReport,
         },
       };
     }
 
-    // Generate final report
-    const report = await generateMockInterviewReport(
-      mockInterview._id.toString(),
+    // Generate the next question before permanently completing
+    // the current question.
+    //
+    // If RAG/OpenAI fails here, the current question remains
+    // answerProcessing=true and will be reset in the catch block.
+    const nextQuestionNumber =
+      mockInterview.currentQuestion + 1;
+
+    const nextQuestionText = await generateNextQuestion(
+      mockInterview.documentId.toString(),
+      nextQuestionNumber,
     );
 
-    // Save final report
-    const savedReport = await MockInterviewReport.create({
+    // Save the current answer only after the next question
+    // has been successfully generated.
+
+    claimedQuestion.candidateAnswer = answer;
+    claimedQuestion.answerTranscript = answerTranscript;
+    claimedQuestion.duration = duration;
+    claimedQuestion.score = evaluation.score;
+    claimedQuestion.feedback = evaluation.feedback;
+    claimedQuestion.answeredAt = new Date();
+    claimedQuestion.answerProcessing = false;
+
+    await claimedQuestion.save();
+
+    // Save the newly generated question.
+    const nextQuestion = await MockInterviewQuestion.create({
       mockInterviewId: mockInterview._id,
-      overallScore: report.overallScore,
-      strengths: report.strengths,
-      weaknesses: report.weaknesses,
-      summary: report.summary,
-      recommendation: report.recommendation,
+      questionNumber: nextQuestionNumber,
+      question: nextQuestionText,
     });
+
+    // Move the interview to the next question.
+    mockInterview.currentQuestion = nextQuestionNumber;
+
+    await mockInterview.save();
 
     return {
       success: true,
-      interviewCompleted: true,
+      interviewCompleted: false,
       data: {
-        evaluation,
-        report: savedReport,
+        evaluation: {
+          score: evaluation.score,
+          feedback: evaluation.feedback,
+        },
+        nextQuestion,
       },
     };
-  }
+  } catch (error) {
 
-  // Generate the next question
+    // If OpenAI/RAG fails, release the processing lock. The candidate's answer is NOT marked as answered, so the request can safely be retried.
 
-  const nextQuestionNumber = mockInterview.currentQuestion + 1;
-
-  const nextQuestionText = await generateNextQuestion(
-    mockInterview.documentId.toString(),
-    nextQuestionNumber,
-  );
-
-  // Save next question
-
-  const nextQuestion = await MockInterviewQuestion.create({
-    mockInterviewId: mockInterview._id,
-    questionNumber: nextQuestionNumber,
-    question: nextQuestionText,
-  });
-
-  // Move interview to next question
-
-  mockInterview.currentQuestion = nextQuestionNumber;
-
-  await mockInterview.save();
-
-  return {
-    success: true,
-    interviewCompleted: false,
-    data: {
-      evaluation: {
-        score: evaluation.score,
-        feedback: evaluation.feedback,
+    await MockInterviewQuestion.updateOne(
+      {
+        _id: claimedQuestion._id,
       },
-      nextQuestion,
-    },
-  };
-};
+      {
+        $set: {
+          answerProcessing: false,
+        },
+      },
+    );
 
+    throw error;
+  }
+};
 
 export const getMockInterviewService = async (
   mockInterviewId: string, 

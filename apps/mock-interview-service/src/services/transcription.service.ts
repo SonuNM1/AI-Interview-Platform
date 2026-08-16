@@ -17,6 +17,8 @@ export const transcribeCandidateAudio = async (
 
   const transcript = await transcribeAudio(audioBuffer, filename, mimetype);
 
+  console.log("🎤 Transcription:", transcript); // verify that the audio was transcribed properly 
+
   // making sure the provider actually returned usable text
 
   if (!transcript) {

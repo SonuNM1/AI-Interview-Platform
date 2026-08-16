@@ -1,30 +1,48 @@
 import Chunk from "../models/chunk.model.js";
 import { generateEmbedding } from "./embedding.service.js";
 import openai from "../providers/openai.provider.js";
+import mongoose from "mongoose";
 
-// Finds the most relevant chunks for a user's question
+// Finds the most relevant chunks for a user's question - if documentId is provided, search is restricted to that resume 
 
-export const searchDocuments = async (question: string) => {
+export const searchDocuments = async (
+  question: string, 
+  documentId?: string 
+) => {
   // Convert the user's question into an embedding vector
 
   const questionEmbedding = await generateEmbedding(question);
 
   console.log("✅ Question embeddinng generated");
 
+  // building the Vector Search configuration 
+
+  const vectorSearch: any = {
+    index: "chunk_vector_index", 
+    path: "embedding", 
+    queryVector: questionEmbedding, 
+    numCandidates: 100, 
+    limit: 5 
+  }
+
+  // restricting vector search to the requested resume when documentId is provided 
+
+  if(documentId) {
+    vectorSearch.filter = {
+      documentId: {
+        $eq: new mongoose.Types.ObjectId(documentId)
+      }
+    }
+  }
+
   // perform semantic search using MongoDB Atlas Vector Search
 
   const results = await Chunk.aggregate([
     {
-      $vectorSearch: {
-        index: "chunk_vector_index",
-        path: "embedding", // embedding field inside MongoDB
-        queryVector: questionEmbedding, // user question embedding
-        numCandidates: 100, // number of documents to scan
-        limit: 5, // return top matching chunks
-      },
+      $vectorSearch: vectorSearch
     },
 
-    // return only required fields
+    // return only required fields required by the application
 
     {
       $project: {
@@ -33,7 +51,7 @@ export const searchDocuments = async (question: string) => {
         chunkIndex: 1,
         text: 1,
 
-        // similarity score
+        // MongoDB Vector Search similarity score
 
         score: {
           $meta: "vectorSearchScore",
@@ -41,6 +59,7 @@ export const searchDocuments = async (question: string) => {
       },
     },
   ]);
+
   console.log(`✅ ${results.length} relevant chunks found`);
 
   // print the returned chunks
@@ -104,13 +123,14 @@ ${question}
   return completion.choices[0].message.content;
 };
 
-// searches relevant chunks and streams the final AI answer token-by-token
-
 // Citations tell the user where the AI got its answer from = for example, which PDF/document and which chunk supported the answer
+
+// searches relevant chunks and streams the final AI answer token-by-token - if documentId is provided, only chunks from that resume are retrieved 
 
 export const searchDocumentsStream = async (
   question: string,
   onToken: (token: string) => void,
+  documentId?: string, 
 ) => {
   // 1. Convert the question into an embedding
 
@@ -118,17 +138,31 @@ export const searchDocumentsStream = async (
 
   console.log("✅ Question embedding generated");
 
+  // building the Vector Search configuration 
+
+  const vectorSearch: any = {
+    index: "chunk_vector_index", 
+    path: "embedding", 
+    queryVector: questionEmbedding, 
+    numCandidates: 100, 
+    limit: 5 
+  }
+
+  // restrict vector search to the requested resume when documentId is provided 
+
+  if(documentId) {
+    vectorSearch.filter = {
+      documentId: {
+        $eq: new mongoose.Types.ObjectId(documentId)
+      }
+    }
+  }
+
   // find the most relevant chunks from MongoDB Vector Search
 
   const chunks = await Chunk.aggregate([
     {
-      $vectorSearch: {
-        index: "chunk_vector_index",
-        path: "embedding",
-        queryVector: questionEmbedding,
-        numCandidates: 100,
-        limit: 5,
-      },
+      $vectorSearch: vectorSearch
     },
 
     // connecting Chunk with its parent document
