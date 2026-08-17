@@ -159,6 +159,7 @@ export const submitMockInterviewAnswerService = async (
   );
 
   // Another request already submitted or is currently processing this answer.
+  
   if (!claimedQuestion) {
     return {
       success: false,

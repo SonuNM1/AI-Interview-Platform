@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { forgotPassword, login, profile, refresh, register, resendOTP, resetPassword } from "../controllers/auth.controller.js";
+import { forgotPassword, googleLogin, login, profile, refresh, register, resendOTP, resetPassword } from "../controllers/auth.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { logout } from "../controllers/auth.controller.js";
 import { verifyEmailController } from "../controllers/auth.controller.js";
@@ -35,5 +35,9 @@ router.post("/forgot-password", forgotPassword)
 // reset password 
 
 router.post("/reset-password", resetPassword)
+
+// google login 
+
+router.post("/google", googleLogin);
 
 export default router; 

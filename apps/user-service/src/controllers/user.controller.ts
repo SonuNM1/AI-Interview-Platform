@@ -41,7 +41,16 @@ export const createUser = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request, res: Response) => {
   try {
+    const userId = req.headers["x-user-id"] as string;
+
     const { id } = req.params;
+
+    if (userId !== id) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only update your own profile",
+      });
+    }
 
     const {
       firstName,
@@ -112,7 +121,7 @@ export const getUser = async (req: Request, res: Response) => {
 
 export const getMyProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id;
+    const userId = req.headers["x-user-id"] as string;
 
     const user = await getUserProfile({
       id: userId,
@@ -141,9 +150,20 @@ export const deleteUserController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = req.params.id as string;
 
-    const result = await deleteUserProfile(userId);
+    const authenticatedUserId = req.headers["x-user-id"] as string;
+    const requestedUserId = req.params.id as string;
+
+    // Users can only delete their own profile
+
+    if (authenticatedUserId !== requestedUserId) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete your own profile",
+      });
+    }
+
+    const result = await deleteUserProfile(requestedUserId);
 
     return res.status(200).json({
       success: true,
@@ -171,16 +191,21 @@ export const uploadAvatarController = async (
 
     // get current avatar before updating
 
-    const oldAvatarFileId = await getUserAvatarFileId(req.user!.id);
+    const oldAvatarFileId = await getUserAvatarFileId(
+      req.headers["x-user-id"] as string,
+    );
 
     // upload new avatar to File Service
 
-    const uploadedFile = await uploadFileToFileService(req.file, req.user!.id);
+    const uploadedFile = await uploadFileToFileService(
+      req.file,
+      req.headers["x-user-id"] as string,
+    );
 
     // save new avatar id in PostgreSQL
 
     const user = await updateUserAvatar({
-      userId: req.user!.id,
+      userId: req.headers["x-user-id"] as string,
       avatarFileId: uploadedFile._id,
     });
 
@@ -216,7 +241,6 @@ export const uploadResumeController = async (
   res: Response,
 ) => {
   try {
-
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -226,21 +250,26 @@ export const uploadResumeController = async (
 
     // Get existing resume
 
-    const oldResumeFileId = await getUserResumeFileId(req.user!.id);
+    const oldResumeFileId = await getUserResumeFileId(
+      req.headers["x-user-id"] as string,
+    );
 
     // Upload new resume
 
-    const uploadedFile = await uploadFileToFileService(req.file, req.user!.id);
+    const uploadedFile = await uploadFileToFileService(
+      req.file,
+      req.headers["x-user-id"] as string,
+    );
 
     // Save new resume id
 
     const user = await updateUserResume({
-      userId: req.user!.id,
+      userId: req.headers["x-user-id"] as string,
       resumeFileId: uploadedFile._id,
     });
 
     // Delete previous resume
-    
+
     if (oldResumeFileId) {
       try {
         await deleteFileFromFileService(oldResumeFileId);

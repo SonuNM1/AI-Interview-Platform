@@ -3,8 +3,6 @@ import { extractText } from "unpdf";
 import Document from "../models/Document.model.js";
 import { uploadDocument } from "../clients/file-service.client.js";
 import { createChunks } from "./chunk.service.js";
-import Chunk from "../models/chunk.model.js";
-import { generateEmbedding } from "./embedding.service.js";
 
 // Uploads a PDF, extracts its text and stores document metadata -> then creates searchable chunks with embeddings
 
@@ -12,6 +10,7 @@ export const uploadDocumentService = async (
   file: Express.Multer.File,
   uploadedBy: string,
 ) => {
+
   const uploadedFile = await uploadDocument(file, uploadedBy); // upload original PDF to File Service
 
   // read uploaded PDF into memory

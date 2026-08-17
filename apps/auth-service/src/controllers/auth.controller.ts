@@ -21,6 +21,7 @@ import { JwtPayload } from "jsonwebtoken";
 import { verifyEmail } from "../services/auth.service.js";
 import { resendOTPService } from "../services/auth.service.js";
 import { forgotPasswordService } from "../services/auth.service.js";
+import { loginWithGoogle } from "../services/google-auth.service.js";
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -237,3 +238,32 @@ export const resetPassword = async (
     next(error) ; 
   }
 }
+
+// social login - google 
+
+export const googleLogin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Google ID token is required",
+      });
+    }
+
+    const result = await loginWithGoogle(idToken);
+
+    return res.status(200).json({
+      success: true,
+      message: "Google login successful",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

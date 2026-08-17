@@ -1,36 +1,35 @@
 import { Router } from "express";
-import {createUser, deleteUserController, getMyProfile, getUser, updateUser, uploadAvatarController, uploadResumeController} from "../controllers/user.controller.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
+import {
+  createUser,
+  deleteUserController,
+  getMyProfile,
+  getUser,
+  updateUser,
+  uploadAvatarController,
+  uploadResumeController,
+} from "../controllers/user.controller.js";
 import upload from "../config/multer.config.js";
 
-const router = Router()
+const router = Router();
 
-console.log("User routes loaded...")
+router.get("/me", getMyProfile);
 
-// Create empty user profile post registration - connected with Auth Service
+router.patch(
+  "/me/avatar",
+  upload.single("file"),
+  uploadAvatarController,
+);
 
-router.post("/", createUser)
+router.patch(
+  "/me/resume",
+  upload.single("file"),
+  uploadResumeController,
+);
 
-// Update existing user profile 
+router.get("/:id", getUser);
 
-router.patch("/:id", authMiddleware, updateUser)
+router.patch("/:id", updateUser);
 
-// Get profile 
+router.delete("/delete-user/:id", deleteUserController);
 
-router.get("/:id", getUser)
-
-// delete user profile - deve only 
-
-router.delete("/delete-user/:id", deleteUserController)
-
-// updating the profile image 
-
-router.patch("/me/avatar",authMiddleware, upload.single("file"),uploadAvatarController);
-
-router.patch("/me/resume", authMiddleware, upload.single("file"), uploadResumeController) ; 
-
-// Authenticated 
-
-router.get("/me", authMiddleware, getMyProfile) ; 
-
-export default router ; 
+export default router; 

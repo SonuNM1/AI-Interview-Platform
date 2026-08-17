@@ -78,6 +78,12 @@ const mockInterviewSchema = new Schema(
   },
 );
 
+// speeds up queries that retrieve all interviews belonging to a user 
+
+mockInterviewSchema.index({
+  userId: 1
+})
+
 export default mongoose.model<IMockInterview>(
   "MockInterview",
   mockInterviewSchema,
