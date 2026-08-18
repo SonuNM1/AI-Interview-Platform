@@ -24,7 +24,10 @@ export const uploadAttachment = async (
         `${process.env.FILE_SERVICE_URL}/upload`,
         formData,
         {
-            headers: formData.getHeaders(),
+            headers: {
+                ...formData.getHeaders(), 
+                "x-user-id": uploadedBy
+            }
         }
     );
 

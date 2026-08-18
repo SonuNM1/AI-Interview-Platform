@@ -4,8 +4,20 @@ import {z} from "zod" ;
 export const registerSchema = z.object({
     email: z.email("Invalid email address"), 
 
-    password: z.string().min(4, "Password must be at least 4 characters")
+    password: z.string().min(4, "Password must be at least 4 characters"),
+
+    role: z.enum(["CANDIDATE", "RECRUITER", "MENTOR"], {
+        error: "Please select a valid role"
+    })
 }) ; 
+
+export const googleLoginSchema = z.object({
+    idToken: z.string().min(1, "Google ID token is required"), 
+
+    role: z.enum(["CANDIDATE", "RECRUITER", "MENTOR"], {
+        error: "Please select a valid role"
+    })
+})
 
 export const loginSchema = z.object({
     email: z.email("Invalid email"), 
@@ -46,4 +58,6 @@ type ResendOTPInput = z.infer<typeof resendOTPSchema> ;
 type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
 type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>
 
-export type {RegisterInput, LoginInput, RefreshTokenInput, ResendOTPInput, ForgotPasswordInput, ResetPasswordSchema} ; 
+type GoogleLoginInput = z.infer<typeof googleLoginSchema> ; 
+
+export type {RegisterInput, LoginInput, RefreshTokenInput, ResendOTPInput, ForgotPasswordInput, ResetPasswordSchema, GoogleLoginInput} ; 

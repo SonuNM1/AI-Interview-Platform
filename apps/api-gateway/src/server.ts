@@ -3,6 +3,8 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import proxyRoutes from "./routes/proxy.routes.js";
+import fileRoutes from "./routes/file.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
 
 const app = express();
 
@@ -25,6 +27,10 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/v1", proxyRoutes);
+
+app.use("/api/v1/files", fileRoutes);
+
+app.use("/api/v1/chat", chatRoutes);
 
 app.use(express.json());
 

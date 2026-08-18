@@ -23,7 +23,14 @@ export const uploadAttachment = async (
 
         // later this will come from socket/auth 
 
-        const uploadedBy = req.body.uploadedBy;
+        const uploadedBy = req.headers["x-user-id"] as string ; 
+
+        if(!uploadedBy) {
+            return res.status(401).json({
+                success: false, 
+                message: "Authenticated user ID missing"
+            })
+        }
 
         const uploadedFile =
             await uploadAttachmentService(

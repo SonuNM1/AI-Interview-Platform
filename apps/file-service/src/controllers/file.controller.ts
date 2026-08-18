@@ -1,5 +1,10 @@
 import { Request, Response, NextFunction } from "express";
-import { deleteFile, getFileById, getSignedUrlByFileId, uploadFile } from "../services/file.service.js";
+import {
+  deleteFile,
+  getFileById,
+  getSignedUrlByFileId,
+  uploadFile,
+} from "../services/file.service.js";
 
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -22,12 +27,21 @@ export const uploadFileController = async (
       });
     }
 
+    const uploadedBy = req.headers["x-user-id"] as string;
+
+    if (!uploadedBy) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID missing",
+      });
+    }
+
     // uploading the file and save its metadata
 
     const uploadedFile = await uploadFile(
       req.file,
-      req.body.uploadedBy,
-      req.body.isPublic,
+      uploadedBy,
+      req.body.isPublic === "true",
     );
 
     return res.status(201).json({
@@ -48,9 +62,22 @@ export const uploadFileController = async (
 
 // deleting the file from S3 and MongoDB URL - later only file owner/admin will be allowed
 
-export const deleteFileController = async (req: Request<{id: string}>, res: Response) => {
+export const deleteFileController = async (
+  req: Request<{ id: string }>,
+  res: Response,
+) => {
   try {
-    await deleteFile(req.params.id);
+    const userId = req.headers["x-user-id"] as string;
+    const userRole = req.headers["x-user-role"] as string;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user Id missing",
+      });
+    }
+
+    await deleteFile(req.params.id, userId, userRole);
 
     return res.status(200).json({
       success: true,
@@ -65,51 +92,69 @@ export const deleteFileController = async (req: Request<{id: string}>, res: Resp
   }
 };
 
-// returns metadata of a single file - future implementation will add authorization after API Gateway 
+// returns metadata of a single file - future implementation will add authorization after API Gateway
 
 export const getFileByIdController = async (
-    req: Request<{ id: string }>,
-    res: Response
+  req: Request<{ id: string }>,
+  res: Response,
 ) => {
-    try {
+  try {
+    const userId = req.headers["x-user-id"] as string;
+    const userRole = req.headers["x-user-role"] as string;
 
-        const file = await getFileById(req.params.id);
-
-        return res.status(200).json({
-            success: true,
-            data: file,
-        });
-} catch (error) {
-
-        return res.status(404).json({
-            success: false,
-            message: error instanceof Error ? error.message : "Failed to fetch file.",
-        });
-
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID missing",
+      });
     }
-}
 
-// Returns a temporary signed URL for a file 
+    const file = await getFileById(req.params.id, userId, userRole);
+
+    return res.status(200).json({
+      success: true,
+      data: file,
+    });
+  } catch (error) {
+    return res.status(404).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to fetch file.",
+    });
+  }
+};
+
+// Returns a temporary signed URL for a file
 
 export const getSignedUrlController = async (
-    req: Request<{ id: string }>,
-    res: Response
+  req: Request<{ id: string }>,
+  res: Response,
 ) => {
-    try {
+  try {
+    const userId = req.headers["x-user-id"] as string;
+    const userRole = req.headers["x-user-role"] as string;
 
-        const url = await getSignedUrlByFileId(req.params.id);
-
-        return res.status(200).json({
-            success: true,
-            data: url,
-        });
-  } catch (error) {
-        console.error("Signed URL error: ", error) ; 
-
-        return res.status(404).json({
-            success: false,
-            message: error instanceof Error ? error.message : "Failed to generate signed URL.",
-        });
-
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID missing",
+      });
     }
+
+    const url = await getSignedUrlByFileId(req.params.id, userId, userRole);
+
+    return res.status(200).json({
+      success: true,
+      data: url,
+    });
+  } catch (error) {
+    console.error("Signed URL error: ", error);
+
+    return res.status(404).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate signed URL.",
+    });
+  }
 };

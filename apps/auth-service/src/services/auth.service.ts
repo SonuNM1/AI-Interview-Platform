@@ -14,6 +14,7 @@ import { publishEvent } from "@repo/shared-rabbitmq";
 import { AppError } from "../utils/AppError.js";
 import { verifyEmailInput } from "../validators/verify-email.schema.js";
 import { deleteOTP, getOTP } from "./otp.service.js";
+import { RoleType } from "../generated/prisma/index.js";
 import axios from "axios";
 import { UserEventType } from "@repo/shared-rabbitmq";
 
@@ -26,7 +27,7 @@ export const comparePassword = async (password: string, hash: string) => {
 };
 
 export const registerUser = async (data: RegisterInput) => {
-  const { email, password } = data;
+  const { email, password, role } = data;
 
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -42,6 +43,7 @@ export const registerUser = async (data: RegisterInput) => {
     data: {
       email,
       passwordHash,
+      role: role as RoleType,
     },
   });
 
@@ -53,6 +55,7 @@ export const registerUser = async (data: RegisterInput) => {
     type: UserEventType.USER_REGISTERED,
     id: user.id,
     email: user.email,
+    role: user.role,
   });
 
   console.log("After publish");
@@ -73,6 +76,10 @@ export const loginUser = async (data: LoginInput) => {
 
   if (!user) {
     throw new AppError("Invalid email or password", 401);
+  }
+
+  if (user.deletedAt) {
+    throw new AppError("This account has been deleted", 400);
   }
 
   // comparing entered password with the hashed password stored in the database
@@ -152,6 +159,16 @@ export const loginUser = async (data: LoginInput) => {
 // Delete user from auth db
 
 export const deleteUser = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
   // deleting the refresh tokens first
 
   await prisma.refreshToken.deleteMany({
@@ -160,11 +177,14 @@ export const deleteUser = async (userId: string) => {
     },
   });
 
-  // delete user from auth db
+  // soft delete user from auth db
 
-  await prisma.user.delete({
+  await prisma.user.update({
     where: {
       id: userId,
+    },
+    data: {
+      deletedAt: new Date(),
     },
   });
 
@@ -193,11 +213,26 @@ export const refreshAccessToken = async (data: RefreshTokenInput) => {
   };
 
   // Find the current login session
+
   const session = await prisma.refreshToken.findUnique({
     where: {
       id: payload.sessionId,
     },
   });
+
+  if (!session) {
+    throw new AppError("Session not found", 404);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: payload.id,
+    },
+  });
+
+  if (!user || user.deletedAt) {
+    throw new AppError("Account is deleted or unavailable", 401);
+  }
 
   // Session does not exist
   if (!session) {
@@ -223,10 +258,11 @@ export const refreshAccessToken = async (data: RefreshTokenInput) => {
   }
 
   // Generate new Access Token
+
   const accessToken = generateAccessToken({
-    id: payload.id,
-    email: payload.email,
-    role: payload.role,
+    id: user.id,
+    email: user.email,
+    role: user.role,
   });
 
   return {
@@ -344,117 +380,112 @@ export const resendOTPService = async (data: ResendOTPInput) => {
     throw new AppError("User not found", 404);
   }
 
-  if(user.isEmailVerified) {
-    throw new AppError("Email is already verified", 400) ;
+  if (user.isEmailVerified) {
+    throw new AppError("Email is already verified", 400);
   }
 
-  const otpData = await getOTP(user.id) ; 
+  const otpData = await getOTP(user.id);
 
-  if(!otpData) {
-    throw new AppError("OTP has expired. Please register again", 404)
+  if (!otpData) {
+    throw new AppError("OTP has expired. Please register again", 404);
   }
 
-  if(otpData.resendCount >= 3) {
-    throw new AppError("Maximum OTP resend attempts exceeded", 429) ; 
+  if (otpData.resendCount >= 3) {
+    throw new AppError("Maximum OTP resend attempts exceeded", 429);
   }
 
   await publishEvent("user_events", {
-    type: UserEventType.RESEND_OTP, 
-    id: user.id, 
-    email: user.email 
-  })
+    type: UserEventType.RESEND_OTP,
+    id: user.id,
+    email: user.email,
+  });
 
   return {
-    message: "OTP sent successfully"
-  }
+    message: "OTP sent successfully",
+  };
 };
 
-// forgot password 
+// forgot password
 
-export const forgotPasswordService = async (
-  data: ForgotPasswordInput
-) => {
-  const {email} = data ; 
+export const forgotPasswordService = async (data: ForgotPasswordInput) => {
+  const { email } = data;
 
   const user = await prisma.user.findUnique({
     where: {
-      email 
-    }
-  })
+      email,
+    },
+  });
 
-  if(!user) {
-    throw new AppError("User not found", 404) ; 
+  if (!user) {
+    throw new AppError("User not found", 404);
   }
 
-  if(!user.isEmailVerified) {
-    throw new AppError("Please verify your email first", 400) ; 
+  if (!user.isEmailVerified) {
+    throw new AppError("Please verify your email first", 400);
   }
 
   await publishEvent("user_events", {
-    type: UserEventType.PASSWORD_RESET, 
-    id: user.id, 
-    email: user.email 
-  }) ; 
+    type: UserEventType.PASSWORD_RESET,
+    id: user.id,
+    email: user.email,
+  });
 
   return {
-    message: "Password reset OTP sent successfully"
-  }
-}
+    message: "Password reset OTP sent successfully",
+  };
+};
 
-// Reset password 
+// Reset password
 
-export const resetPasswordService = async (
-  data: ResetPasswordSchema
-) => {
-  const {email, otp, newPassword} = data ; 
+export const resetPasswordService = async (data: ResetPasswordSchema) => {
+  const { email, otp, newPassword } = data;
 
-  // find user 
+  // find user
 
   const user = await prisma.user.findUnique({
     where: {
-      email 
-    }
-  })
+      email,
+    },
+  });
 
-  if(!user){
-    throw new AppError("User not found", 404) ; 
+  if (!user) {
+    throw new AppError("User not found", 404);
   }
 
-  // fetch OTP from Redis 
+  // fetch OTP from Redis
 
-  const otpData = await getOTP(user.id) ;
+  const otpData = await getOTP(user.id);
 
-  if(!otpData) {
-    throw new AppError("OTP has expired", 404) ; 
+  if (!otpData) {
+    throw new AppError("OTP has expired", 404);
   }
 
-  // comparing OTP 
+  // comparing OTP
 
-  if(otpData.otp !== otp) {
-    throw new AppError("Invalid OTP", 400) ; 
+  if (otpData.otp !== otp) {
+    throw new AppError("Invalid OTP", 400);
   }
 
-  // Hash new password 
+  // Hash new password
 
-  const hashedPassword = await bcrypt.hash(newPassword, 10) ; 
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  // update password 
+  // update password
 
   await prisma.user.update({
     where: {
-      id: user.id 
-    }, 
+      id: user.id,
+    },
     data: {
-      passwordHash: hashedPassword
-    }
-  })
+      passwordHash: hashedPassword,
+    },
+  });
 
-  // remove OTP from Redis 
+  // remove OTP from Redis
 
-  await deleteOTP(user.id) ; 
+  await deleteOTP(user.id);
 
   return {
-    message: "Password reset successful"
-  }
-
-}
+    message: "Password reset successful",
+  };
+};

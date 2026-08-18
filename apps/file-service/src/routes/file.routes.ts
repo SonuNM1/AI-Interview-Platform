@@ -6,7 +6,7 @@ const router = Router() ;
 
 // uploading a single file 
 
-router.post("/upload", upload.single("file"), uploadFileController) ; // file means the frontend must send form-data file: resume.pdf - the key must be named 'file'
+router.post("/upload", upload.single("file"), uploadFileController) ; 
 
 router.delete("/:id",deleteFileController);
 

@@ -11,6 +11,7 @@ import {
 } from "../services/auth.service.js";
 import {
   forgotPasswordSchema,
+  googleLoginSchema,
   loginSchema,
   refreshTokenSchema,
   registerSchema,
@@ -247,22 +248,18 @@ export const googleLogin = async (
   next: NextFunction,
 ) => {
   try {
-    const { idToken } = req.body;
+    const validatedData = googleLoginSchema.parse(req.body) ; 
 
-    if (!idToken) {
-      return res.status(400).json({
-        success: false,
-        message: "Google ID token is required",
-      });
-    }
-
-    const result = await loginWithGoogle(idToken);
+    const result = await loginWithGoogle(
+      validatedData.idToken, 
+      validatedData.role 
+    )
 
     return res.status(200).json({
-      success: true,
-      message: "Google login successful",
-      data: result,
-    });
+      success: true, 
+      message: "Google login successful", 
+      data: result 
+    })
   } catch (error) {
     next(error);
   }

@@ -12,6 +12,7 @@ enum RoleType {
   ADMIN
   RECRUITER
   CANDIDATE
+  MENTOR
 }
 
 model User {
@@ -27,6 +28,8 @@ model User {
   isPhoneVerified Boolean @default(false)
 
   role RoleType @default(CANDIDATE) 
+
+  deletedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt 

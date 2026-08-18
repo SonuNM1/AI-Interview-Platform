@@ -5,12 +5,16 @@ import {
   generateRefreshToken,
 } from "../utils/jwt.js";
 import bcrypt from "bcrypt";
+import { RoleType } from "../generated/prisma/index.js";
 
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
 );
 
-export const loginWithGoogle = async (idToken: string) => {
+export const loginWithGoogle = async (
+  idToken: string, 
+  requestedRole: "CANDIDATE" | "RECRUITER" | "MENTOR"
+) => {
 
   // Verify that the ID token was actually issued by Google and was intended for our application.
   
@@ -55,6 +59,7 @@ export const loginWithGoogle = async (idToken: string) => {
         googleId,
         passwordHash: null,
         isEmailVerified: true,
+        role: requestedRole as RoleType
       },
     });
   } else if (!user.googleId) {

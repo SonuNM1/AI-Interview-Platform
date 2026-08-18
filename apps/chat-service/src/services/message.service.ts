@@ -15,6 +15,15 @@ export const createMessageService = async (
     mimeType: string;
   }[],
 ): Promise<MessageDocument> => {
+  const conversation = await Conversation.findOne({
+    _id: conversationId,
+    participants: senderId,
+  });
+
+  if (!conversation) {
+    throw new Error("You are not a participant in this conversation.");
+  }
+
   const message = await Message.create({
     conversationId,
     senderId,
@@ -34,8 +43,20 @@ export const getConversationMessagesService = async (
   conversationId: string,
   page: number = 1,
   limit: number = 20,
+  userId?: string,
 ): Promise<MessageDocument[]> => {
   console.log("Conversation ID:", conversationId);
+
+  if (userId) {
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      participants: userId,
+    });
+
+    if (!conversation) {
+      throw new Error("You are not a participant in this conversation.");
+    }
+  }
 
   const messages = await Message.find({
     conversationId,
@@ -57,6 +78,7 @@ export const getConversationMessagesService = async (
 export const editMessageService = async (
   messageId: string,
   text: string,
+  userId: string,
 ): Promise<MessageDocument> => {
   // Find the message
 
@@ -64,6 +86,10 @@ export const editMessageService = async (
 
   if (!message) {
     throw new Error("Message not found.");
+  }
+
+  if (message.senderId !== userId) {
+    throw new Error("You can only edit your own messages.");
   }
 
   // Update the message text
@@ -85,6 +111,7 @@ export const editMessageService = async (
 
 export const deleteMessageService = async (
   messageId: string,
+  userId: string 
 ): Promise<MessageDocument> => {
   // Find the message
 
@@ -93,6 +120,10 @@ export const deleteMessageService = async (
   if (!message) {
     throw new Error("Message not found.");
   }
+
+  if (message.senderId !== userId) {
+    throw new Error("You can only delete your own messages.");
+}
 
   // Replace the original text
 
@@ -122,6 +153,15 @@ export const sendMessageService = async (
   text: string,
   file?: Express.Multer.File,
 ): Promise<MessageDocument> => {
+  const conversation = await Conversation.findOne({
+    _id: conversationId,
+    participants: senderId,
+  });
+
+  if (!conversation) {
+    throw new Error("You are not a participant in this conversation.");
+  }
+
   const attachments: {
     fileId: string;
     url: string;

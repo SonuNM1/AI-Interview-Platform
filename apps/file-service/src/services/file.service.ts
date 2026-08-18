@@ -1,8 +1,5 @@
 import path from "path";
-
-// generates a globally unique filename (eg: 8d7ab6d3-9c5a-4c4d-aad3-3a6c0ef4d8f1.pdf rather than resume.pdf) - this prevents two users uploading files with the same name from overwriting each other 
-
-import { randomUUID } from "crypto"; 
+import { randomUUID } from "crypto"; // generates a globally unique filename (eg: 8d7ab6d3-9c5a-4c4d-aad3-3a6c0ef4d8f1.pdf rather than resume.pdf) - this prevents two users uploading files with the same name from overwriting each other 
 import File from "../models/file.model.js";
 import { deleteFileFromS3, generateSignedUrl, uploadFileToS3 } from "../helpers/s3.helper.js";
 
@@ -61,7 +58,11 @@ export const uploadFile = async (
 
 // Deleting a file from S3 and MongoDB - later will add authorization as well to ensure only the owner/admin can delete 
 
-export const deleteFile = async (fileId: string) => {
+export const deleteFile = async (
+    fileId: string,
+    userId: string, 
+    userRole: string 
+) => {
 
     const file = await File.findById(fileId);
 
@@ -69,7 +70,12 @@ export const deleteFile = async (fileId: string) => {
         throw new Error("File not found.");
     }
 
+    if(file.uploadedBy !== userId && userRole !== "ADMIN") {
+        throw new Error("You are not authorized to delete this file.")
+    }
+
     // Delete from S3
+
     await deleteFileFromS3(file.key);
 
     // Delete metadata from MongoDB
@@ -80,7 +86,11 @@ export const deleteFile = async (fileId: string) => {
 
 // Get file by ID - returns file metadata by its ID - later in future authorization will ensure only permitted users can access the private files 
 
-export const getFileById = async (fileId: string) => {
+export const getFileById = async (
+    fileId: string, 
+    userId: string, 
+    userRole: string 
+) => {
 
     const file = await File.findById(fileId);
 
@@ -88,17 +98,29 @@ export const getFileById = async (fileId: string) => {
         throw new Error("File not found.");
     }
 
+    if(!file.isPublic && file.uploadedBy !== userId && userRole !== "ADMIN") {
+        throw new Error("You are not authorized to access this file.")
+    }
+
     return file;
 }
 
 // returns a signed URL for a file - authorization will be added later on 
 
-export const getSignedUrlByFileId = async (fileId: string) => {
+export const getSignedUrlByFileId = async (
+    fileId: string, 
+    userId: string, 
+    userRole: string 
+) => {
 
     const file = await File.findById(fileId);
 
     if (!file) {
         throw new Error("File not found.");
+    }
+
+    if(!file.isPublic && file.uploadedBy !== userId && userRole !== "ADMIN") {
+        throw new Error("You are nnot authorized to access this file.")
     }
 
     const signedUrl = await generateSignedUrl(file.key);

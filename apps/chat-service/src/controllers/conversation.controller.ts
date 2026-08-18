@@ -11,6 +11,22 @@ export const createConversation = async (
     try {
         const {participants, isGroup, title} = req.body ;
 
+        const userId = req.headers["x-user-id"] as string;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false, 
+                message: "Authenticated user ID missing"
+            })
+        }
+
+        if(!participants.includes(userId)) {
+            return res.status(403).json({
+                success: false, 
+                message: "You must be a participant in the conversation"
+            })
+        }
+
         const conversation = await createConversationService(
             participants, 
             isGroup, 
@@ -35,7 +51,14 @@ export const createConversation = async (
 
 export const getUserConversations = async (req: Request, res: Response): Promise<Response> => {
     try {
-        const userId  = req.params.userId ;
+        const userId = req.headers["x-user-id"] as string;
+
+        if(!userId) {
+            return res.status(401).json({
+                success: false, 
+                message: "Authenticated user ID missing"
+            })
+        }
 
         const conversations =
             await getUserConversationsService(
