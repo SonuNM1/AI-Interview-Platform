@@ -25,7 +25,7 @@ export const getPublicInterviewService = async (
 
   if (!interview) {
     return {
-      success: true,
+      success: false,
       message: "Interview not found",
     };
   }

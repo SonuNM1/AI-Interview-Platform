@@ -5,6 +5,8 @@ import cors from "cors";
 import proxyRoutes from "./routes/proxy.routes.js";
 import fileRoutes from "./routes/file.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
+import interviewRoutes from "./routes/interview.routes.js";
+import publicInterviewRoutes from "./routes/public-interview.routes.js";
 
 const app = express();
 
@@ -31,6 +33,10 @@ app.use("/api/v1", proxyRoutes);
 app.use("/api/v1/files", fileRoutes);
 
 app.use("/api/v1/chat", chatRoutes);
+
+app.use("/api/v1/interviews", interviewRoutes);
+
+app.use("/api/v1/public/interviews", publicInterviewRoutes);
 
 app.use(express.json());
 

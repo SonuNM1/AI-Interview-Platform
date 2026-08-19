@@ -3,7 +3,7 @@ import { getPublicInterviewService, startInterviewService } from "../services/pu
 
 export const getPublicInterview = async (req: Request, res: Response) => {
   try {
-    const { accessToken } = req.params;
+    const accessToken = req.params.accessToken as string;
 
     const result = await getPublicInterviewService(accessToken);
 
@@ -30,7 +30,7 @@ export const getPublicInterview = async (req: Request, res: Response) => {
 
     return res.status(500).json({
         success: false,
-        message: error?.message || "Internal Server Error"
+        message: error instanceof Error ? error.message : "Internal Server Error"
     })
   }
 };
@@ -40,7 +40,7 @@ export const startInterview = async (
     res: Response, 
 ) => {
     try {
-        const {accessToken} = req.params; // extracting access token
+        const accessToken = req.params.accessToken as string; // extracting access token
 
         // starting interview 
 
@@ -63,7 +63,7 @@ export const startInterview = async (
 
         return res.status(500).json({
             success: false,
-            message: error.message || "Internal Server Error"
+            message: error instanceof Error ? error.message : "Internal Server Error"
         });
     }
 }

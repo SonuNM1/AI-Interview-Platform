@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getPublicInterview, startInterview } from "../controllers/publicInterview.controller.js";
 
-const router = Router();
+const router: Router = Router();
 
 // Candidate accesses interview using secure access token.
 

@@ -4,7 +4,7 @@ import publicInterviewRoutes from "./routes/publicInterview.routes.js";
 import interviewQuestionRoutes from "./routes/interviewQuestion.routes.js";
 import interviewReportRoutes from "./routes/interviewReport.routes.js"
 
-const app = express() 
+const app:express.Express = express() 
 
 app.use(express.json()) ; 
 

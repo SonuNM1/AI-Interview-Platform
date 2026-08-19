@@ -1,7 +1,8 @@
 import express from "express" ; 
+import { Router } from "express";
 import { getFirstQuestion, submitCandidateAnswer, getNextQuestion, submitInterview } from "../controllers/interviewQuestion.controller.js";
 
-const router = express.Router() ; 
+const router: Router = express.Router() ; 
 
 router.post("/:accessToken/start-question", getFirstQuestion) ; 
 

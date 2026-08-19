@@ -13,11 +13,9 @@ export const createInterviewSchema = z.object({
     type: z.enum([
         "TECHNICAL", 
         "HR", 
-        "SYSTEM DESIGN", 
+        "SYSTEM_DESIGN", 
         "DSA"
     ]),
-
-    createdBy: z.string(), 
     candidateId: z.string().optional()
 })
 

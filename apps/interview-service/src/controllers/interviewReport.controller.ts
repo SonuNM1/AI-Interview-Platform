@@ -6,7 +6,7 @@ export const generateInterviewReport = async (
   res: Response,
 ) => {
   try {
-    const { accessToken } = req.params;
+    const accessToken = req.params.accessToken as string;
 
     const result = await generateInterviewReportService(accessToken);
 

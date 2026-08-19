@@ -7,7 +7,7 @@ export const getFirstQuestion = async (
     res: Response 
 ) => {
     try {
-        const {accessToken} = req.params ; 
+        const accessToken = req.params.accessToken as string ; 
 
         const result = await getFirstQuestionService(accessToken) ; 
 
@@ -37,10 +37,8 @@ export const submitCandidateAnswer = async (
   req: Request,
   res: Response
 ) => {
-
   try {
-
-    const { accessToken } = req.params;
+    const accessToken = req.params.accessToken as string;
 
     const {
       questionNumber,
@@ -87,7 +85,7 @@ export const getNextQuestion = async (
   res: Response
 ) => {
   try {
-    const { accessToken } = req.params;
+    const accessToken = req.params.accessToken as string;
 
     const result = await getNextQuestionService(
       accessToken
@@ -125,7 +123,7 @@ export const submitInterview = async (
   res: Response
 ) => {
   try {
-    const { accessToken } = req.params;
+    const accessToken = req.params.accessToken as string;
 
     const result = await submitInterviewService(accessToken)
 

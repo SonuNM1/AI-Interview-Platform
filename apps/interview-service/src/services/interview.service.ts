@@ -9,26 +9,40 @@ export const createInterviewService = async (data: any) => {
     }) ;
 }
 
-export const getInterviewByIdService = async (id: string) => {
+export const getInterviewByIdService = async (
+    id: string, 
+    userId: string 
+) => {
     console.log("Service id:", id);
 
-    return await Interview.findById(id) ; 
+    return await Interview.findOne({
+        _id: id, 
+        createdBy: userId
+    }) ; 
 }
 
 // recruiters generally want to see the most recently created interviews first 
 
-export const getAllInterviewsService = async () => {
-    return await Interview.find().sort({
+export const getAllInterviewsService = async (
+    userId: string
+) => {
+    return await Interview.find({
+        createdBy: userId,
+    }).sort({
         createdAt: -1
-    }) ; // -1: newest first, 1 -> oldest first 
+    });
 }
 
 export const updateInterviewService = async (
     id: string, 
+    userId: string, 
     data: any 
 ) => {
-    return await Interview.findByIdAndUpdate(
-        id, 
+    return await Interview.findOneAndUpdate(
+        {
+            _id: id, 
+            createdBy: userId
+        }, 
         data, 
         {
             new: true, 
@@ -37,8 +51,14 @@ export const updateInterviewService = async (
     )
 }
 
-export const deleteInterviewService = async (id: string) => {
-    return await Interview.findByIdAndDelete(id) ; 
+export const deleteInterviewService = async (
+    id: string, 
+    userId: string 
+) => {
+    return await Interview.findOneAndDelete({
+        _id: id, 
+        createdBy: userId 
+    }) ; 
 }
 
 /*
@@ -49,11 +69,17 @@ export const deleteInterviewService = async (id: string) => {
 
 // Generating a cryptographically secure token that will be used to create a public interview link for candidates 
 
-export const publishInterviewService = async (id: string) => {
+export const publishInterviewService = async (
+    id: string, 
+    userId: string
+) => {
 
     // fetching interview first to check its current publish state 
 
-    const interview = await Interview.findById(id) ; 
+    const interview = await Interview.findOne({
+        _id: id, 
+        createdBy: userId 
+    }) ; 
 
     if(!interview) return null ; 
 
