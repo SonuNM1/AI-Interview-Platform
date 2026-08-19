@@ -3,7 +3,7 @@ import { Router } from "express";
 import upload from "../config/multer.config.js";
 import { uploadAttachment } from "../controllers/attachment.controller.js";
 
-const router = Router();
+const router: Router = Router();
 
 // uploading chat attachment 
 

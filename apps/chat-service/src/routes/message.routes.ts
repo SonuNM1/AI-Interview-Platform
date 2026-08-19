@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createMessage, deleteMessage, editMessage, getConversationMessages, sendMessage } from "../controllers/message.controller.js";
 import upload from "../config/multer.config.js";
 
-const router = Router() ;
+const router: Router = Router() ;
 
 router.post("/", createMessage) ; 
 

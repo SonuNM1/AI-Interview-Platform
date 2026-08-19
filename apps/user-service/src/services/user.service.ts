@@ -7,6 +7,7 @@ interface CreateUserInput {
 
 interface updateUserInput {
   id: string;
+  username?: string ;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -53,6 +54,7 @@ export const updateUserProfile = async (data: updateUserInput) => {
     data: {
       firstName: data.firstName,
       lastName: data.lastName,
+      username: data.username, 
       phone: data.phone,
       headline: data.headline,
       location: data.location,

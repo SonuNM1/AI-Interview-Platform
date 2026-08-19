@@ -3,34 +3,30 @@ import Conversation, { ConversationDocument } from "../models/Conversation.model
 // creating a new conversation or returning the existing one 
 
 export const createConversationService = async (
-    participants: string[], 
-    isGroup: boolean = false, 
-    title?: string 
+    userId: string, 
+    participantId: string 
 ) => {
 
     // normalizing participant order to prevent duplicate conversations 
 
-    const normalizedParticipants = [...participants].sort();
+    const normalizedParticipants = [userId, participantId].sort() ; 
 
-    if(!isGroup) {
+    const existingConversation = await Conversation.findOne({
+        participants: {
+            $all: normalizedParticipants, 
+            $size: 2
+        }, 
+        isGroup: false 
+    })
 
-        const existingConversation = await Conversation.findOne({
-            participants: {
-                $all: normalizedParticipants,
-                $size: normalizedParticipants.length
-            },
-            isGroup: false
-        });
-
-        if (existingConversation) {
-            return existingConversation;
-        }
+    if(existingConversation) {
+        return existingConversation ; 
     }
+
     return Conversation.create({
-        participants: normalizedParticipants,
-        isGroup,
-        title
-    });
+        participants: normalizedParticipants, 
+        isGroup: false 
+    })
 }
 
 // returns all conversations for a user 

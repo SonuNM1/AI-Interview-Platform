@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { createConversation, getUserConversations, getConversationMessages } from "../controllers/conversation.controller.js";
 
-const router = Router()
+const router: Router = Router()
 
 // create conversation 
 
@@ -13,6 +13,6 @@ router.get("/:conversationId/messages", getConversationMessages) ;
 
 // get user conversations 
 
-router.get("/:userId", getUserConversations) ; 
+router.get("/", getUserConversations) ; 
 
 export default router ; 

@@ -1,5 +1,5 @@
 import { Server, Socket } from "socket.io";
-
+import Conversation from "../models/Conversation.model.js";
 import { SOCKET_EVENTS } from "../constants/socket-events.js";
 import {
   createMessageService,
@@ -7,16 +7,36 @@ import {
 } from "../services/message.service.js";
 import { lastSeenUsers, onlineUsers } from "../utils/presence.js";
 import { streamAIResponse } from "../services/ai-service.client.js";
+import jwt from "jsonwebtoken"
+import { AuthenticatedSocket } from "../types/socket.js";
 
 // register all socket events
 
 export const registerSocketEvents = (io: Server) => {
-  io.on(SOCKET_EVENTS.CONNECTION, (socket: Socket) => {
+
+  io.on(SOCKET_EVENTS.CONNECTION, (socket) => {
+
+    const authenticatedSocket = socket as AuthenticatedSocket ; 
+
     console.log(`✅ User Connected : ${socket.id}`);
 
     // join a conversation room
 
-    socket.on(SOCKET_EVENTS.JOIN_CONVERSATION, (conversationId: string) => {
+    socket.on(SOCKET_EVENTS.JOIN_CONVERSATION, async (conversationId: string) => {
+
+      const conversation = await Conversation.findById(conversationId) ; 
+
+      if(!conversation) {
+        return ; 
+      }
+
+      if(!conversation.participants.includes(authenticatedSocket.userId)) {
+        socket.emit("error", {
+          message: "You are not a participant in this conversation"
+        })
+        return ; 
+      }
+
       // Join the requested conversation room
 
       socket.join(conversationId);
@@ -26,7 +46,9 @@ export const registerSocketEvents = (io: Server) => {
 
     // marks a user online
 
-    socket.on(SOCKET_EVENTS.USER_CONNECTED, ({ userId }) => {
+    socket.on(SOCKET_EVENTS.USER_CONNECTED, () => {
+
+      const userId = authenticatedSocket.userId
       // save online user
 
       onlineUsers.set(userId, socket.id);
@@ -42,7 +64,10 @@ export const registerSocketEvents = (io: Server) => {
 
     // returns presence of a user
 
-    socket.on(SOCKET_EVENTS.GET_PRESENCE, ({ userId }) => {
+    socket.on(SOCKET_EVENTS.GET_PRESENCE, () => {
+
+      const userId = authenticatedSocket.userId ; 
+
       socket.emit(SOCKET_EVENTS.PRESENCE, {
         userId,
         online: onlineUsers.has(userId),
@@ -53,12 +78,26 @@ export const registerSocketEvents = (io: Server) => {
     // handle sending a message
 
     socket.on(SOCKET_EVENTS.SEND_MESSAGE, async (payload) => {
-      const { conversationId, senderId, text, attachments } = payload;
+
+      const { conversationId, text, attachments } = payload;
+
+      const senderId = authenticatedSocket.userId 
+
+      const conversation = await Conversation.findById(conversationId) 
+
+      if(!conversation) {
+        return ; 
+      }
+
+      if(!conversation.participants.includes(authenticatedSocket.userId)) {
+        return ; 
+      }
 
       // Save message in MongoDB
+
       const message = await createMessageService(
         conversationId,
-        senderId,
+        authenticatedSocket.userId,
         text,
         attachments,
       );
@@ -97,19 +136,21 @@ export const registerSocketEvents = (io: Server) => {
 
     // broadcast typing event to everyon else in the conversation
 
-    socket.on(SOCKET_EVENTS.TYPING, ({ conversationId, userId }) => {
+    socket.on(SOCKET_EVENTS.TYPING, ({ conversationId }) => {
+
       socket.to(conversationId).emit(SOCKET_EVENTS.TYPING, {
         conversationId,
-        userId,
+        userId: authenticatedSocket.userId 
       });
     });
 
     // Broadcast stop typing event
 
-    socket.on(SOCKET_EVENTS.STOP_TYPING, ({ conversationId, userId }) => {
+    socket.on(SOCKET_EVENTS.STOP_TYPING, ({ conversationId }) => {
+
       socket.to(conversationId).emit(SOCKET_EVENTS.STOP_TYPING, {
         conversationId,
-        userId,
+        userId: authenticatedSocket.userId,
       });
     });
 
@@ -161,7 +202,11 @@ export const registerSocketEvents = (io: Server) => {
     socket.on(SOCKET_EVENTS.EDIT_MESSAGE, async ({ messageId, text }) => {
       // Update the message
 
-      const message = await editMessageService(messageId, text);
+      const message = await editMessageService(
+        messageId, 
+        authenticatedSocket.userId, 
+        text
+      );
 
       // Notify everyone in the conversation
 

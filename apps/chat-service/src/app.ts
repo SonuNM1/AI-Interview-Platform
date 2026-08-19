@@ -4,7 +4,7 @@ import conversationRoutes from "./routes/conversation.routes.js"
 import messageRoutes from "./routes/message.routes.js";
 import attachmentRoutes from "./routes/attachment.routes.js";
 
-const app = express();
+const app: express.Express = express();
 
 app.use(cors()) ; 
 

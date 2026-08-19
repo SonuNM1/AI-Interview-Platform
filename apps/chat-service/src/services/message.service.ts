@@ -41,21 +41,20 @@ export const createMessageService = async (
 
 export const getConversationMessagesService = async (
   conversationId: string,
+  userId: string,
   page: number = 1,
   limit: number = 20,
-  userId?: string,
 ): Promise<MessageDocument[]> => {
+
   console.log("Conversation ID:", conversationId);
 
-  if (userId) {
-    const conversation = await Conversation.findOne({
-      _id: conversationId,
-      participants: userId,
-    });
+  const conversation = await Conversation.findOne({
+    _id: conversationId, 
+    participants: userId 
+  }) ; 
 
-    if (!conversation) {
-      throw new Error("You are not a participant in this conversation.");
-    }
+  if(!conversation) {
+    throw new Error("You must be a participant in the conversation.")
   }
 
   const messages = await Message.find({
@@ -80,6 +79,7 @@ export const editMessageService = async (
   text: string,
   userId: string,
 ): Promise<MessageDocument> => {
+  
   // Find the message
 
   const message = await Message.findById(messageId);
@@ -166,7 +166,7 @@ export const sendMessageService = async (
     fileId: string;
     url: string;
     fileName: string;
-    mimeTyp: string;
+    mimeType: string;
   }[] = [];
 
   // Upload attachment to File Service

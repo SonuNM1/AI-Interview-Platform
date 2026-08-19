@@ -54,6 +54,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     const {
       firstName,
+      username,
       lastName,
       phone,
       headline,
@@ -65,6 +66,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     const user = await updateUserProfile({
       id,
+      username,
       firstName,
       lastName,
       phone,
@@ -82,6 +84,18 @@ export const updateUser = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Update user controller error: ", error);
+
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: "Username already taken",
+      });
+    }
 
     return res.status(500).json({
       success: false,
@@ -150,7 +164,6 @@ export const deleteUserController = async (
   next: NextFunction,
 ) => {
   try {
-
     const authenticatedUserId = req.headers["x-user-id"] as string;
     const requestedUserId = req.params.id as string;
 

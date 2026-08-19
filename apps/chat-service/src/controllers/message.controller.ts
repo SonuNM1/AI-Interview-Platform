@@ -73,9 +73,9 @@ export const getConversationMessages = async (
 
     const messages = await getConversationMessagesService(
       conversationId,
-      page,
-      limit,
       userId,
+      page, 
+      limit
     );
 
     return res.json({

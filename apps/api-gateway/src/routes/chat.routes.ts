@@ -21,7 +21,7 @@ router.post(
 );
 
 router.get(
-  "/conversations/:userId",
+  "/conversations",
   authenticate,
   authorize("CANDIDATE", "RECRUITER", "MENTOR", "ADMIN"),
   chatProxy,
