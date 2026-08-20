@@ -11,12 +11,20 @@ import { transcribeCandidateAudio } from "../services/transcription.service.js";
 
 export const createMockInterview = async (req: Request, res: Response) => {
   try {
-    const { userId, documentId } = req.body;
+    const userId = req.headers["x-user-id"] as string;
+    const { documentId } = req.body;
 
-    if (!userId || !documentId) {
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+    }
+
+    if (!documentId) {
       return res.status(400).json({
         success: false,
-        message: "userId and documentId are required",
+        message: "documentId is required",
       });
     }
 
@@ -43,7 +51,7 @@ export const startMockInterview = async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const userId = req.headers["x-user-id"] as string;
 
-     if (!userId) {
+    if (!userId) {
       return res.status(401).json({
         success: false,
         message: "User authentication required",
@@ -71,50 +79,59 @@ export const submitMockInterviewAnswer = async (
   res: Response,
 ) => {
   try {
-    const { id } = req.params; // extracting the mock interview ID from the URL 
+    const userId = req.headers["x-user-id"] as string;
 
-    const audioFile = req.file ; // multer places the uploaded file inside req.file 
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+    }
 
-    // duration is sent as a normal multipart/form-data filed 
+    const id = req.params.id as string; // extracting the mock interview ID from the URL
 
-    const duration = req.body.duration ? Number(req.body.duration) : undefined ; 
+    const audioFile = req.file; // multer places the uploaded file inside req.file
 
-    // making sure the candidate actually submitted an audio recording 
+    // duration is sent as a normal multipart/form-data filed
 
-    if(!audioFile) {
+    const duration = req.body.duration ? Number(req.body.duration) : undefined;
+
+    // making sure the candidate actually submitted an audio recording
+
+    if (!audioFile) {
       return res.status(400).json({
         success: false,
         message: "Audio answer is required",
       });
     }
 
-    // converting the candidate's speech into text before evaluation 
+    // converting the candidate's speech into text before evaluation
 
     const answerTranscript = await transcribeCandidateAudio(
-      audioFile.buffer, 
-      audioFile.originalname, 
-      audioFile.mimetype 
-    )
+      audioFile.buffer,
+      audioFile.originalname,
+      audioFile.mimetype,
+    );
 
-    // for now the transcript is also used as the candidate asnwer, this keeps the existing evaluation pipeline unchanged 
+    // for now the transcript is also used as the candidate asnwer, this keeps the existing evaluation pipeline unchanged
 
     const result = await submitMockInterviewAnswerService(
-      id as string, 
-      answerTranscript, 
-      answerTranscript, 
-      duration 
-    )
+      id,
+      userId,
+      answerTranscript,
+      answerTranscript,
+      duration,
+    );
 
-    // return validation/business errors from the service 
+    // return validation/business errors from the service
 
-    if(!result.success) {
-      return res.status(400).json(result) ; 
+    if (!result.success) {
+      return res.status(400).json(result);
     }
 
-    // reutnr the evaluation and next question to the client 
+    // reutnr the evaluation and next question to the client
 
-    return res.status(200).json(result)
-
+    return res.status(200).json(result);
   } catch (error: any) {
     console.error("Submit Mock Interview Answer Error:", error);
 
@@ -127,7 +144,7 @@ export const submitMockInterviewAnswer = async (
 
 export const getMockInterview = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const userId = req.headers["x-user-id"] as string;
 
@@ -150,7 +167,7 @@ export const getMockInterview = async (req: Request, res: Response) => {
 
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };

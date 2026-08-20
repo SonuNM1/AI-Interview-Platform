@@ -11,7 +11,10 @@ export const uploadDocumentService = async (
   uploadedBy: string,
 ) => {
 
-  const uploadedFile = await uploadDocument(file, uploadedBy); // upload original PDF to File Service
+  const uploadedFile = await uploadDocument(
+    file, 
+    uploadedBy
+  ); // upload original PDF to File Service
 
   // read uploaded PDF into memory
 

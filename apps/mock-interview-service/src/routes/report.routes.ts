@@ -6,7 +6,6 @@ import {
 
 const router = Router();
 
-
 // Get final mock interview report
 
 router.get("/:id/report", getMockInterviewReportController);

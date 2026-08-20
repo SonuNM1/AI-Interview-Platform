@@ -4,13 +4,18 @@ import { uploadDocumentService } from "../services/document.service.js";
 
 // Uploads a document and extracts its text.
 
-export const uploadDocument = async (
-  req: Request,
-  res: Response,
-) => {
+export const uploadDocument = async (req: Request, res: Response) => {
   try {
     const file = req.file;
-    const { uploadedBy } = req.body;
+    
+    const userId = req.headers["x-user-id"] as string;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID missing",
+      });
+    }
 
     if (!file) {
       return res.status(400).json({
@@ -19,10 +24,7 @@ export const uploadDocument = async (
       });
     }
 
-    const document = await uploadDocumentService(
-      file,
-      uploadedBy,
-    );
+    const document = await uploadDocumentService(file, userId);
 
     return res.status(201).json({
       success: true,

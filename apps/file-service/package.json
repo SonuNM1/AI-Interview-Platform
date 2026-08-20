@@ -7,7 +7,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test:s3": "tsx src/scripts/test-s3-upload.ts"
+    "test:s3": "tsx src/scripts/test-s3-upload.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

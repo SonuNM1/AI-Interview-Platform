@@ -1,5 +1,5 @@
-import Redis from "ioredis";
-import type {Redis as RedisClient} from "ioredis"
+import { Redis } from "ioredis";
+import type { Redis as RedisClient } from "ioredis";
 
 let redis: RedisClient | null = null;
 

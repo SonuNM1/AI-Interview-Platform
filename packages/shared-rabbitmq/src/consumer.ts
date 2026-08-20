@@ -1,4 +1,5 @@
-import { getChannel } from "./connection";
+import { getChannel } from "./connection.js";
+import amqp from "amqplib";
 
 export const consumeEvent = async (
     exchange: string, 
@@ -23,7 +24,7 @@ export const consumeEvent = async (
 
     console.log(`👂 Listening to queue: ${queue}`) ; 
 
-    channel.consume(queue, async (msg) => {
+    channel.consume(queue, async (msg: amqp.ConsumeMessage | null) => {
         if(!msg) return ; 
 
         try {

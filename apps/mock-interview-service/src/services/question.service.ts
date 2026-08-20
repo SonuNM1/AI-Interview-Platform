@@ -15,6 +15,7 @@ const QUESTION_FOCUS = [
 ];
 
 // Generates one interview question for the given question number.
+
 export const generateNextQuestion = async (
   documentId: string,
   questionNumber: number,

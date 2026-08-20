@@ -7,8 +7,19 @@ export const getMockInterviewReportController = async (
 ) => {
   try {
     const id  = req.params.id as string;
+    const userId = req.headers["x-user-id"] as string ; 
 
-    const result = await getMockInterviewReport(id);
+    if(!userId) {
+      return res.status(401).json({
+        success: false, 
+        message: "User authentication required"
+      })
+    }
+
+    const result = await getMockInterviewReport(
+      id, 
+      userId 
+    );
 
     if (!result.success) {
       return res.status(400).json(result);

@@ -103,12 +103,18 @@ export const startMockInterviewService = async (
 
 export const submitMockInterviewAnswerService = async (
   mockInterviewId: string,
+  userId: string, 
   answer: string,
   answerTranscript?: string,
   duration?: number,
 ) => {
+  
   // Find the mock interview.
-  const mockInterview = await MockInterview.findById(mockInterviewId);
+
+  const mockInterview = await MockInterview.findOne({
+    _id: mockInterviewId, 
+    userId 
+  });
 
   if (!mockInterview) {
     return {

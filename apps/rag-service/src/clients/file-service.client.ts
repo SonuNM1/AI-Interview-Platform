@@ -2,7 +2,7 @@ import axios from "axios";
 import FormData from "form-data";
 import fs from "fs";
 
-// Uploads a document to the File Service.
+// uploads a document to the File Service
 
 export const uploadDocument = async (
   file: Express.Multer.File,
@@ -22,7 +22,10 @@ export const uploadDocument = async (
     `${process.env.FILE_SERVICE_URL}/api/v1/files/upload`,
     formData,
     {
-      headers: formData.getHeaders(),
+      headers: {
+        ...formData.getHeaders(),
+        "x-user-id": uploadedBy, // forward authenticated user identity 
+      },
     },
   );
 

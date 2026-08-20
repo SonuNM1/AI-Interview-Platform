@@ -100,8 +100,14 @@ Generate the final interview report.
   return report;
 };
 
-export const getMockInterviewReport = async (mockInterviewId: string) => {
-  const mockInterview = await MockInterview.findById(mockInterviewId);
+export const getMockInterviewReport = async (
+  mockInterviewId: string, 
+  userId: string 
+) => {
+  const mockInterview = await MockInterview.findOne({
+    _id: mockInterviewId, 
+    userId 
+  });
 
   if (!mockInterview) {
     return {
