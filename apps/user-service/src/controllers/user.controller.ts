@@ -20,9 +20,9 @@ interface MulterRequest extends Request {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { id } = req.body;
+    const { id, email } = req.body;
 
-    const user = await createUserProfile({ id });
+    const user = await createUserProfile({ id, email });
 
     return res.status(201).json({
       success: true,
@@ -108,7 +108,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
 export const getUser = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params; // get user id from URL params
+    const id = req.params.id as string; // get user id from URL params
 
     // call service layer
 

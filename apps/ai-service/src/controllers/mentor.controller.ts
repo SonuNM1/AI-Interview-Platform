@@ -18,7 +18,7 @@ export const chatWithMentor = async (req: Request, res: Response) => {
       });
     }
 
-    const response = await generateMentorResponse(conversationId, message);
+    const response = await generateMentorResponse(conversationId, message, () => {});
 
     return res.json({
       success: true,

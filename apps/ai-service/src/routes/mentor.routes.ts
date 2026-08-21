@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { chatWithMentor, stopMentorResponse, streamMentorResponse } from "../controllers/mentor.controller.js";
 
-const router = Router();
+const router: Router = Router();
 
 // chat with the ai mentor 
 

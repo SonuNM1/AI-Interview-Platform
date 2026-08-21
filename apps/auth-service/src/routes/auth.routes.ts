@@ -7,7 +7,7 @@ import { validateRequest } from "../middlewares/validate-request.js";
 import { verifyEmailSchema } from "../validators/verify-email.schema.js";
 import { deleteUserController } from "../controllers/auth.controller.js";
 
-const router = Router()
+const router: Router = Router()
 
 router.post("/register", register) ; 
 router.post("/login", login) ; 

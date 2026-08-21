@@ -2,7 +2,7 @@ import { Router } from "express";
 import upload from "../config/multer.config.js";
 import { deleteFileController, getFileByIdController, getSignedUrlController, uploadFileController } from "../controllers/file.controller.js";
 
-const router = Router() ; 
+const router: Router = Router() ; 
 
 // uploading a single file 
 

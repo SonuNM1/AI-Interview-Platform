@@ -2,7 +2,7 @@ import express from "express"
 import authRoutes from "./routes/auth.routes.js"
 import { errorHandler } from "./middlewares/error.middleware.js";
 
-const app = express() ; 
+const app: express.Express = express() ; 
 
 app.use(express.json()) ; // parse JSON request body 
 

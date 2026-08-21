@@ -3,7 +3,7 @@ import cors from "cors";
 
 import mentorRoutes from "./routes/mentor.routes.js";
 
-const app = express();
+const app: express.Express = express();
 
 app.use(cors());
 

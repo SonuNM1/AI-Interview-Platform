@@ -1,0 +1,10 @@
+{
+  "latestErrorEvent": {
+    "code": "TYPE-001",
+    "message": "Failed to generate type declaration. Execute the below cmd to reproduce and fix the error. #TYPE-001\nargs: {\"cmd\":\"\\\"C:\\\\\\\\Program Files\\\\\\\\nodejs\\\\\\\\node.exe\\\" \\\"G:\\\\\\\\Projects\\\\\\\\AI Interview Platform\\\\\\\\node_modules\\\\\\\\.pnpm\\\\\\\\typescript@6.0.3\\\\\\\\node_modules\\\\\\\\typescript\\\\\\\\bin\\\\\\\\tsc\\\" --project \\\"G:\\\\\\\\Projects\\\\\\\\AI Interview Platform\\\\\\\\frontend\\\\\\\\candidate-app\\\\\\\\node_modules\\\\\\\\.federation\\\\\\\\tsconfig.037194ac343fd3ffb2505795140f5a01.json\\\"\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/type#type-001",
+    "args": {
+      "cmd": "\"C:\\\\Program Files\\\\nodejs\\\\node.exe\" \"G:\\\\Projects\\\\AI Interview Platform\\\\node_modules\\\\.pnpm\\\\typescript@6.0.3\\\\node_modules\\\\typescript\\\\bin\\\\tsc\" --project \"G:\\\\Projects\\\\AI Interview Platform\\\\frontend\\\\candidate-app\\\\node_modules\\\\.federation\\\\tsconfig.037194ac343fd3ffb2505795140f5a01.json\""
+    },
+    "timestamp": 1787303128961
+  }
+}

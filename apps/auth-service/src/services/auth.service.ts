@@ -12,7 +12,7 @@ import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 import jwt from "jsonwebtoken";
 import { publishEvent } from "@repo/shared-rabbitmq";
 import { AppError } from "../utils/AppError.js";
-import { verifyEmailInput } from "../validators/verify-email.schema.js";
+import { VerifyEmailInput } from "../validators/verify-email.schema.js";
 import { deleteOTP, getOTP } from "./otp.service.js";
 import { RoleType } from "../generated/prisma/index.js";
 import axios from "axios";
@@ -83,6 +83,10 @@ export const loginUser = async (data: LoginInput) => {
   }
 
   // comparing entered password with the hashed password stored in the database
+
+  if (!user.passwordHash) {
+    throw new AppError("Invalid email or password", 401);
+  }
 
   const isPasswordValid = await comparePassword(password, user.passwordHash);
 
@@ -338,7 +342,7 @@ export const logoutUser = async (data: RefreshTokenInput) => {
 
 // Verify email otp
 
-export const verifyEmail = async (data: verifyEmailInput) => {
+export const verifyEmail = async (data: VerifyEmailInput) => {
   const otpData = await getOTP(data.userId);
 
   if (!otpData) {

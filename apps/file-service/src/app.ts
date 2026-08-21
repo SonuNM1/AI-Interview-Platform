@@ -1,7 +1,7 @@
 import express from "express" ;
 import fileRoutes from "./routes/file.routes.js"
 
-const app = express() 
+const app: express.Express = express() 
 
 app.use(express.json()) ; 
 

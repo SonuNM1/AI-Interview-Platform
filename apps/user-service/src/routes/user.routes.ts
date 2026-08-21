@@ -10,7 +10,7 @@ import {
 } from "../controllers/user.controller.js";
 import upload from "../config/multer.config.js";
 
-const router = Router();
+const router: Router = Router();
 
 router.get("/me", getMyProfile);
 
