@@ -7,21 +7,17 @@ export default defineConfig({
     react(),
 
     federation({
-      // Unique name of the remote application
       name: "candidate",
 
-      // Entry file generated for the host
       filename: "remoteEntry.js",
 
-      // Components exposed to other applications
       exposes: {
         "./App": "./src/App.tsx",
       },
 
-      // Share React with the host
       shared: ["react", "react-dom"],
 
-      dts: false, // we will handle TS declarations ourselves for now
+      dts: false,
     }),
   ],
 
