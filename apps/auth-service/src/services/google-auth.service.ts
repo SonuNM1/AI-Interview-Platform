@@ -12,12 +12,11 @@ const googleClient = new OAuth2Client(
 );
 
 export const loginWithGoogle = async (
-  idToken: string, 
-  requestedRole: "CANDIDATE" | "RECRUITER" | "MENTOR"
+  idToken: string,
+  requestedRole?: "CANDIDATE" | "RECRUITER" | "MENTOR",
 ) => {
-
-  // Verify that the ID token was actually issued by Google and was intended for our application.
-  
+  // Verify that the ID token was actually issued by Google
+  // and was intended for our application.
   const ticket = await googleClient.verifyIdToken({
     idToken,
     audience: process.env.GOOGLE_CLIENT_ID,
@@ -33,15 +32,14 @@ export const loginWithGoogle = async (
   const email = payload.email;
 
   // First try to find the account using Google ID.
-
   let user = await prisma.user.findUnique({
     where: {
       googleId,
     },
   });
 
-  // If the Google ID isn't linked yet, check whether the email already belongs to an existing account.
-
+  // If the Google ID isn't linked yet,
+  // check whether the email already belongs to an existing account.
   if (!user) {
     user = await prisma.user.findUnique({
       where: {
@@ -50,22 +48,28 @@ export const loginWithGoogle = async (
     });
   }
 
-  // Create a new candidate account if no account exists.
-
+  // If no account exists, this is only allowed
+  // when a role was supplied from the registration flow.
   if (!user) {
+    if (!requestedRole) {
+      throw new Error(
+        "No account found. Please register first.",
+      );
+    }
+
+    // Create the new Google account.
     user = await prisma.user.create({
       data: {
         email,
         googleId,
         passwordHash: null,
         isEmailVerified: true,
-        role: requestedRole as RoleType
+        role: requestedRole as RoleType,
       },
     });
   } else if (!user.googleId) {
-    
-    // Link Google to an existing email account.
-    
+    // Existing email account found.
+    // Link the Google account to it.
     user = await prisma.user.update({
       where: {
         id: user.id,
@@ -78,7 +82,6 @@ export const loginWithGoogle = async (
   }
 
   // Generate the same JWT access token used by normal login.
-
   const accessToken = generateAccessToken({
     id: user.id,
     email: user.email,
@@ -86,7 +89,6 @@ export const loginWithGoogle = async (
   });
 
   // Create a refresh-token session.
-
   const session = await prisma.refreshToken.create({
     data: {
       tokenHash: "",
@@ -98,7 +100,6 @@ export const loginWithGoogle = async (
   });
 
   // Generate refresh token using the existing JWT system.
-
   const refreshToken = generateRefreshToken({
     id: user.id,
     email: user.email,
@@ -107,7 +108,6 @@ export const loginWithGoogle = async (
   });
 
   // Store only the hashed refresh token.
-
   const refreshTokenHash = await bcrypt.hash(
     refreshToken,
     10,

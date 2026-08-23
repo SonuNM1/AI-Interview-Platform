@@ -1,10 +1,15 @@
-import {configureStore} from "@reduxjs/toolkit"
+import { configureStore } from "@reduxjs/toolkit";
+import authReducer from "./authSlice";
 
-// global client-sdie state lives here, we will add slices as the application grows 
+// Central Redux store for the Shell application
 
 export const store = configureStore({
-    reducer: {}
-})
+  reducer: {
+    auth: authReducer,
+  },
+});
 
-export type RootState = ReturnType<typeof store.getState> ;
-export type AppDispatch = typeof store.dispatch ;
+// Types used by our Redux hooks
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

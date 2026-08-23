@@ -1,15 +1,17 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { Toaster } from "@/components/ui/Toast";
 import App from "./App";
-import { AppProviders } from "./app/provider";
-
 import "./index.css";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <AppProviders>
+// Application entry point.
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <ErrorBoundary>
+      <Toaster/>
       <App />
-    </AppProviders>
-  </StrictMode>,
+    </ErrorBoundary>
+  </React.StrictMode>,
 );

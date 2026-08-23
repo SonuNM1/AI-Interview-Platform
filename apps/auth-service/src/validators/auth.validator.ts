@@ -11,13 +11,14 @@ export const registerSchema = z.object({
     })
 }) ; 
 
+// Validate Google authentication request.
 export const googleLoginSchema = z.object({
-    idToken: z.string().min(1, "Google ID token is required"), 
+  idToken: z.string().min(1, "Google ID token is required"),
 
-    role: z.enum(["CANDIDATE", "RECRUITER", "MENTOR"], {
-        error: "Please select a valid role"
-    })
-})
+  role: z
+    .enum(["CANDIDATE", "RECRUITER", "MENTOR"])
+    .optional(),
+});
 
 export const loginSchema = z.object({
     email: z.email("Invalid email"), 
