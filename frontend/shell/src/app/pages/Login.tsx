@@ -2,11 +2,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
+import { toast } from "@/components/ui/Toast";
 import { useAppDispatch } from "@/app/hooks";
 import { setCredentials } from "@/app/authSlice";
 import { useLogin } from "@/app/authQueries";
-
+import { navigateByRole } from "@/app/authNavigation";
 import { googleLogin } from "@/services/auth.api";
 import { loginSchema, type LoginForm } from "@/services/auth.schema";
 
@@ -18,30 +18,37 @@ export function Login() {
 
   const loginMutation = useLogin();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginForm>({
+  const { register, handleSubmit } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
 
-  // Login with email and password.
-  const onSubmit = (data: LoginForm) => {
-    loginMutation.mutate(data, {
-      onSuccess: (response) => {
-        dispatch(
-          setCredentials({
-            user: response.user,
-            accessToken: response.accessToken,
-            refreshToken: response.refreshToken,
-          }),
-        );
-
-        navigate("/");
-      },
-    });
+  const onInvalid = () => {
+    toast.error("Please enter a valid email and password");
   };
+
+  // Login with email and password.
+
+  const onSubmit = (data: LoginForm) => {
+  loginMutation.mutate(data, {
+    onSuccess: (response) => {
+      dispatch(
+        setCredentials({
+          user: response.user,
+          accessToken: response.accessToken,
+          refreshToken: response.refreshToken,
+        }),
+      );
+
+      toast.success("Signed in successfully.");
+
+      navigateByRole(navigate, response.user.role);
+    },
+
+    onError: () => {
+      toast.error("Invalid email or password.");
+    },
+  });
+};
 
   // Google login.
 
@@ -57,29 +64,12 @@ export function Login() {
         }),
       );
 
-      // Send the user to the application for their role.
-      switch (response.user.role) {
-        case "CANDIDATE":
-          navigate("/candidate");
-          break;
-
-        case "RECRUITER":
-          navigate("/recruiter");
-          break;
-
-        case "MENTOR":
-          navigate("/mentor");
-          break;
-
-        case "ADMIN":
-          navigate("/admin");
-          break;
-
-        default:
-          navigate("/");
-      }
+      toast.success("Signed in successfully.");
+      navigateByRole(navigate, response.user.role);
     } catch (error) {
       console.error("Google login failed:", error);
+
+      toast.error("No account found. Please register first.")
     }
   };
 
@@ -127,7 +117,8 @@ export function Login() {
       </div>
 
       {/* Email/password form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
         {/* Email */}
         <div>
           <label
@@ -144,12 +135,6 @@ export function Login() {
             {...register("email")}
             className="h-12 w-full rounded-md border border-[#332F2A] bg-[#201E1B] px-4 text-sm text-[#F2EDE4] outline-none placeholder:text-[#69635C] transition focus:border-[#B9674B]"
           />
-
-          {errors.email && (
-            <p className="mt-1 text-xs text-[#D98569]">
-              {errors.email.message}
-            </p>
-          )}
         </div>
 
         {/* Password */}
@@ -173,14 +158,8 @@ export function Login() {
           <PasswordInput
             registration={register("password")}
             placeholder="Enter your password"
-            error={errors.password?.message}
           />
         </div>
-
-        {/* API error */}
-        {loginMutation.isError && (
-          <p className="text-xs text-[#D98569]">Invalid email or password.</p>
-        )}
 
         {/* Submit */}
         <button

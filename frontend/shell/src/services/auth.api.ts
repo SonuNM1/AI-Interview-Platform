@@ -20,7 +20,8 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
-// Register a new user.
+// Register a new user
+
 export async function register(data: RegisterForm) {
   const response = await api.post("/auth/register", data);
 
@@ -28,6 +29,7 @@ export async function register(data: RegisterForm) {
 }
 
 // Login with email and password.
+
 export async function login(data: LoginForm): Promise<AuthResponse> {
   const response = await api.post("/auth/login", data);
 
@@ -64,7 +66,6 @@ export async function resetPassword(data: ResetPasswordForm) {
   return response.data ; 
 }
 
-
 // Verify registration email using OTP
 
 export async function verifyEmail(data: VerifyEmailForm) {
@@ -74,6 +75,7 @@ export async function verifyEmail(data: VerifyEmailForm) {
 }
 
 // Resend email OTP.
+
 export async function resendOTP(email: string) {
   const response = await api.post("/auth/resend-otp", {
     email,
@@ -82,7 +84,10 @@ export async function resendOTP(email: string) {
   return response.data;
 }
 
+
+
 // Get the currently logged-in user.
+
 export async function getProfile(): Promise<AuthUser> {
   const response = await api.get("/auth/profile");
 

@@ -12,10 +12,38 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
+/**
+ * Restore the authenticated user from localStorage when the
+ * application starts again after a page refresh.
+ */
+const getPersistedUser = (): AuthUser | null => {
+  const storedUser = localStorage.getItem("authUser");
+
+  if (!storedUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(storedUser) as AuthUser;
+  } catch {
+    // Remove corrupted/stale user data instead of crashing the app.
+    localStorage.removeItem("authUser");
+    return null;
+  }
+};
+
+const persistedAccessToken = localStorage.getItem("accessToken");
+
+/**
+ * Initial auth state.
+ *
+ * Tokens and user information are restored from localStorage so
+ * Redux does not lose the authenticated user after a page refresh.
+ */
 const initialState: AuthState = {
-  user: null,
-  accessToken: localStorage.getItem("accessToken"),
-  isAuthenticated: !!localStorage.getItem("accessToken"),
+  user: getPersistedUser(),
+  accessToken: persistedAccessToken,
+  isAuthenticated: !!persistedAccessToken,
 };
 
 const authSlice = createSlice({
@@ -23,7 +51,10 @@ const authSlice = createSlice({
   initialState,
 
   reducers: {
-    // Store the logged-in user and tokens.
+    /**
+     * Store authenticated user and tokens after successful login
+     * or registration.
+     */
     setCredentials: (
       state,
       action: PayloadAction<{
@@ -36,25 +67,37 @@ const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.isAuthenticated = true;
 
+      // Persist the access token so authentication survives refresh.
       localStorage.setItem(
         "accessToken",
         action.payload.accessToken,
       );
 
+      // Persist the refresh token for future token renewal.
       localStorage.setItem(
         "refreshToken",
         action.payload.refreshToken,
       );
+
+      // Persist the authenticated user's basic information.
+      localStorage.setItem(
+        "authUser",
+        JSON.stringify(action.payload.user),
+      );
     },
 
-    // Clear authentication data during logout.
+    /**
+     * Clear all authentication information during logout.
+     */
     clearCredentials: (state) => {
       state.user = null;
       state.accessToken = null;
       state.isAuthenticated = false;
 
+      // Remove all persisted authentication information.
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
+      localStorage.removeItem("authUser");
     },
   },
 });

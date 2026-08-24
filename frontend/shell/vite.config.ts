@@ -26,6 +26,22 @@ export default defineConfig({
           name: "candidate",
           entry: "http://localhost:3001/remoteEntry.js",
         },
+
+        recruiter: {
+          type: "module",
+          name: "recruiter",
+          entry: "http://localhost:3002/remoteEntry.js",
+        },
+
+        mentor: {
+          type: "module",
+          name: "mentor",
+          entry: "http://localhost:3003/remoteEntry.js",
+        },
+      },
+
+      exposes: {
+        "./auth": "./src/app/authBridge.ts",
       },
 
       // React is shared between Shell and remote applications.

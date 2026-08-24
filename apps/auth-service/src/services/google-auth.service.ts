@@ -1,11 +1,18 @@
 import { OAuth2Client } from "google-auth-library";
+import bcrypt from "bcrypt";
+
 import { prisma } from "../lib/prisma.js";
+import { RoleType } from "../generated/prisma/index.js";
+
 import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/jwt.js";
-import bcrypt from "bcrypt";
-import { RoleType } from "../generated/prisma/index.js";
+
+import { AppError } from "../utils/AppError.js";
+
+import { publishEvent } from "@repo/shared-rabbitmq";
+import { UserEventType } from "@repo/shared-rabbitmq";
 
 const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
@@ -15,8 +22,7 @@ export const loginWithGoogle = async (
   idToken: string,
   requestedRole?: "CANDIDATE" | "RECRUITER" | "MENTOR",
 ) => {
-  // Verify that the ID token was actually issued by Google
-  // and was intended for our application.
+  // Verify Google ID token.
   const ticket = await googleClient.verifyIdToken({
     idToken,
     audience: process.env.GOOGLE_CLIENT_ID,
@@ -25,40 +31,57 @@ export const loginWithGoogle = async (
   const payload = ticket.getPayload();
 
   if (!payload || !payload.sub || !payload.email) {
-    throw new Error("Invalid Google account");
+    throw new AppError("Invalid Google account", 401);
   }
 
   const googleId = payload.sub;
   const email = payload.email;
 
-  // First try to find the account using Google ID.
-  let user = await prisma.user.findUnique({
-    where: {
-      googleId,
-    },
-  });
+  console.log("========== GOOGLE AUTH ==========");
+  console.log("Email:", email);
+  console.log("Google ID:", googleId);
+  console.log("Requested role:", requestedRole);
 
-  // If the Google ID isn't linked yet,
-  // check whether the email already belongs to an existing account.
-  if (!user) {
-    user = await prisma.user.findUnique({
+  /*
+   * ============================================================
+   * GOOGLE REGISTRATION
+   * ============================================================
+   *
+   * requestedRole is present only when the request comes from
+   * the registration page.
+   */
+
+  if (requestedRole) {
+    // Check whether this Google account already exists.
+    const existingGoogleUser = await prisma.user.findUnique({
+      where: {
+        googleId,
+      },
+    });
+
+    if (existingGoogleUser) {
+      throw new AppError(
+        "An account with this Google account already exists. Please sign in instead.",
+        409,
+      );
+    }
+
+    // Check whether this email already belongs to an account.
+    const existingEmailUser = await prisma.user.findUnique({
       where: {
         email,
       },
     });
-  }
 
-  // If no account exists, this is only allowed
-  // when a role was supplied from the registration flow.
-  if (!user) {
-    if (!requestedRole) {
-      throw new Error(
-        "No account found. Please register first.",
+    if (existingEmailUser) {
+      throw new AppError(
+        "An account with this email already exists. Please sign in instead.",
+        409,
       );
     }
 
-    // Create the new Google account.
-    user = await prisma.user.create({
+    // Create a completely new Google account.
+    const user = await prisma.user.create({
       data: {
         email,
         googleId,
@@ -67,28 +90,98 @@ export const loginWithGoogle = async (
         role: requestedRole as RoleType,
       },
     });
-  } else if (!user.googleId) {
-    // Existing email account found.
-    // Link the Google account to it.
-    user = await prisma.user.update({
-      where: {
-        id: user.id,
-      },
+
+    console.log(
+      "New Google user created:",
+      user.id,
+    );
+
+    // Notify User Service.
+    await publishEvent("user_events", {
+      type: UserEventType.USER_REGISTERED,
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    // Generate tokens for the newly registered user.
+    const accessToken = generateAccessToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    const session = await prisma.refreshToken.create({
       data: {
-        googleId,
-        isEmailVerified: true,
+        tokenHash: "",
+        userId: user.id,
+        expiresAt: new Date(
+          Date.now() + 7 * 24 * 60 * 60 * 1000,
+        ),
       },
     });
+
+    const refreshToken = generateRefreshToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      sessionId: session.id,
+    });
+
+    const refreshTokenHash = await bcrypt.hash(
+      refreshToken,
+      10,
+    );
+
+    await prisma.refreshToken.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        tokenHash: refreshTokenHash,
+      },
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      accessToken,
+      refreshToken,
+    };
   }
 
-  // Generate the same JWT access token used by normal login.
+  /*
+   * ============================================================
+   * GOOGLE LOGIN
+   * ============================================================
+   *
+   * No requestedRole means this request came from the login page.
+   */
+
+  const user = await prisma.user.findUnique({
+    where: {
+      googleId,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(
+      "No account found. Please register first.",
+      404,
+    );
+  }
+
+  // Generate access token.
   const accessToken = generateAccessToken({
     id: user.id,
     email: user.email,
     role: user.role,
   });
 
-  // Create a refresh-token session.
+  // Create refresh-token session.
   const session = await prisma.refreshToken.create({
     data: {
       tokenHash: "",
@@ -99,7 +192,7 @@ export const loginWithGoogle = async (
     },
   });
 
-  // Generate refresh token using the existing JWT system.
+  // Generate refresh token.
   const refreshToken = generateRefreshToken({
     id: user.id,
     email: user.email,

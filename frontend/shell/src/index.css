@@ -1,16 +1,5 @@
 @import "tailwindcss";
 
-/*
-  AI Interview Platform
-  Global design tokens.
-
-  Midnight + Plum + Warm Peach
-  ------------------------------------------------
-  Midnight  -> application background
-  Plum      -> primary interaction
-  Rose      -> secondary accent
-  Peach     -> occasional highlights
-*/
 
 :root {
   --background: #0b0a10;

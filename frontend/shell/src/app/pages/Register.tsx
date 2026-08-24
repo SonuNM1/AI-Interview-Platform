@@ -3,23 +3,17 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GoogleLogin } from "@react-oauth/google";
-
+import axios from "axios";
 import { register, googleLogin } from "@/services/auth.api";
 
-import {
-  registerSchema,
-  type RegisterForm,
-} from "@/services/auth.schema";
+import { registerSchema, type RegisterForm } from "@/services/auth.schema";
 
 import { useAppDispatch } from "@/app/hooks";
 import { setCredentials } from "@/app/authSlice";
 import { toast } from "@/components/ui/Toast";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 
-type Role =
-  | "CANDIDATE"
-  | "RECRUITER"
-  | "MENTOR";
+type Role = "CANDIDATE" | "RECRUITER" | "MENTOR";
 
 const roles: {
   value: Role;
@@ -43,18 +37,12 @@ export function Register() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const [selectedRole, setSelectedRole] =
-    useState<Role>("CANDIDATE");
+  const [selectedRole, setSelectedRole] = useState<Role>("CANDIDATE");
 
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] =
-    useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
-  const {
-    register: registerField,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterForm>({
+  const { register: registerField, handleSubmit } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
 
     defaultValues: {
@@ -62,7 +50,12 @@ export function Register() {
     },
   });
 
+  const onInvalid = () => {
+    toast.error("Please check your information and try again");
+  };
+
   // Register using email/password.
+
   const onSubmit = async (data: RegisterForm) => {
     try {
       setLoading(true);
@@ -72,45 +65,43 @@ export function Register() {
         role: selectedRole,
       });
 
-      toast.success("Account created. Check your email for the verification code.")
-
-      console.log(
-        "Registration successful:",
-        response,
+      toast.success(
+        "Account created. Check your email for the verification code.",
       );
+
+      console.log("Registration successful:", response);
 
       navigate("/verify-email", {
         state: {
-          userId: response.data.id, 
+          userId: response.data.id,
           email: data.email,
         },
       });
     } catch (error) {
-      console.error(
-        "Registration failed:",
-        error,
-      );
+      console.error("Registration failed:", error);
 
-      toast.error("Unable to create your account. Please check your details and try again.")
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error.response?.data?.message ||
+            "Unable to create your account. Please try again.",
+        );
+      } else {
+        toast.error("Unable to create your account. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   // Register using Google.
-  //
-  // Your current backend endpoint requires the role,
-  // so this remains unchanged.
-  const handleGoogleSuccess = async (
-    credential: string,
-  ) => {
+
+  const handleGoogleSuccess = async (credential: string) => {
     try {
       setGoogleLoading(true);
 
-      const response = await googleLogin(
-        credential,
-        selectedRole,
-      );
+      console.log("Google registration role:", selectedRole);
+
+      const response = await googleLogin(credential, selectedRole);
 
       dispatch(
         setCredentials({
@@ -120,11 +111,18 @@ export function Register() {
         }),
       );
 
-      navigate("/");
+      toast.success("Account created successfully");
+
+      navigate("/login", {
+        state: {
+          email: response.user.email,
+        },
+      });
     } catch (error) {
-      console.error(
-        "Google registration failed:",
-        error,
+      console.error("Google registration failed:", error);
+
+      toast.error(
+        "An account with this Google account already exists. Please sign in instead.",
       );
     } finally {
       setGoogleLoading(false);
@@ -135,17 +133,14 @@ export function Register() {
     <div className="w-full max-w-[710px]">
       {/* Heading */}
       <div>
-        <p className="text-sm font-medium text-[#B9674B]">
-          Get started
-        </p>
+        <p className="text-sm font-medium text-[#B9674B]">Get started</p>
 
         <h1 className="mt-2 text-4xl font-semibold tracking-tight text-[#F2EDE4]">
           Create your account
         </h1>
 
         <p className="mt-3 text-sm text-[#8F887F]">
-          Join AI Interview Platform and start your
-          journey.
+          Join AI Interview Platform and start your journey.
         </p>
       </div>
 
@@ -157,16 +152,13 @@ export function Register() {
 
         <div className="grid grid-cols-3 gap-3">
           {roles.map((role) => {
-            const isSelected =
-              selectedRole === role.value;
+            const isSelected = selectedRole === role.value;
 
             return (
               <button
                 key={role.value}
                 type="button"
-                onClick={() =>
-                  setSelectedRole(role.value)
-                }
+                onClick={() => setSelectedRole(role.value)}
                 className={`cursor-pointer rounded-lg border px-4 py-4 text-sm transition ${
                   isSelected
                     ? "border-[#B9674B] bg-[#B9674B]/10 text-[#D98260]"
@@ -181,26 +173,18 @@ export function Register() {
       </div>
 
       {/* Google registration */}
+
       <div className="mt-5 flex justify-center">
-        <div
-          className={
-            googleLoading
-              ? "pointer-events-none opacity-60"
-              : ""
-          }
-        >
+        <div className={googleLoading ? "pointer-events-none opacity-60" : ""}>
           <GoogleLogin
             onSuccess={(response) => {
               if (response.credential) {
-                handleGoogleSuccess(
-                  response.credential,
-                );
+                handleGoogleSuccess(response.credential);
               }
             }}
             onError={() => {
-              console.error(
-                "Google registration failed",
-              );
+              console.error("Google registration failed");
+              toast.error("Google registration failed. Please try again.");
             }}
             width="400"
           />
@@ -211,18 +195,14 @@ export function Register() {
       <div className="my-6 flex items-center gap-4">
         <div className="h-px flex-1 bg-[#332F2A]" />
 
-        <span className="text-xs text-[#706A63]">
-          OR
-        </span>
+        <span className="text-xs text-[#706A63]">OR</span>
 
         <div className="h-px flex-1 bg-[#332F2A]" />
       </div>
 
       {/* Registration form */}
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="space-y-4"
-      >
+
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
         {/* Email */}
         <div>
           <label
@@ -239,12 +219,6 @@ export function Register() {
             placeholder="you@example.com"
             className="h-14 w-full rounded-lg border border-[#332F2A] bg-[#211F1C] px-4 text-sm text-[#F2EDE4] outline-none transition placeholder:text-[#706A63] focus:border-[#B9674B]"
           />
-
-          {errors.email && (
-            <p className="mt-1 text-xs text-[#D98260]">
-              {errors.email.message}
-            </p>
-          )}
         </div>
 
         {/* Password */}
@@ -259,7 +233,6 @@ export function Register() {
           <PasswordInput
             registration={registerField("password")}
             placeholder="Create a password"
-            error={errors.password?.message}
           />
         </div>
 
@@ -269,9 +242,7 @@ export function Register() {
           disabled={loading}
           className="mt-2 h-14 w-full cursor-pointer rounded-lg bg-[#B9674B] text-sm font-semibold text-[#F8F3EC] transition hover:bg-[#C87555] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading
-            ? "Creating account..."
-            : "Create account"}
+          {loading ? "Creating account..." : "Create account"}
         </button>
       </form>
 

@@ -1,4 +1,8 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import {
+  Component,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -38,33 +42,38 @@ export class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <main className="flex min-h-screen items-center justify-center bg-[#1C1A17] px-6 text-[#F2EDE4]">
-          <div className="w-full max-w-[520px] text-center">
-            <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-[#B9674B]/30 bg-[#B9674B]/10">
-              <span className="text-xl text-[#D98260]">
+        <main className="flex min-h-screen items-center justify-center bg-[#151412] px-5 text-[#F2EDE4]">
+          <section className="w-full max-w-lg text-center">
+
+            {/* Error icon */}
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#B9674B]/30 bg-[#B9674B]/10">
+              <span className="text-2xl font-semibold text-[#D98260]">
                 !
               </span>
             </div>
 
-            <p className="mb-2 text-sm font-medium text-[#C47A5E]">
-              Something went wrong
-            </p>
+            {/* Heading */}
+            <div className="mt-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#B9674B]">
+                Unexpected error
+              </p>
 
-            <h1 className="text-3xl font-semibold tracking-tight">
-              We couldn't load this page.
-            </h1>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+                Something went wrong
+              </h1>
 
-            <p className="mt-3 text-sm leading-6 text-[#9E978E]">
-              An unexpected error occurred while loading the
-              application. You can try again or return to the
-              home page.
-            </p>
+              <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#9E978E]">
+                We couldn't load this page right now.
+                Please try again, or return to the home page.
+              </p>
+            </div>
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            {/* Actions */}
+            <div className="mx-auto mt-8 flex w-full max-w-sm flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="h-12 flex-1 cursor-pointer rounded-lg bg-[#B9674B] text-sm font-semibold text-[#F8F3EC] transition hover:bg-[#C87555]"
+                className="h-12 flex-1 rounded-lg bg-[#B9674B] px-5 text-sm font-semibold text-[#F8F3EC] transition hover:bg-[#C87555]"
               >
                 Try again
               </button>
@@ -72,12 +81,13 @@ export class ErrorBoundary extends Component<
               <button
                 type="button"
                 onClick={this.handleGoHome}
-                className="h-12 flex-1 cursor-pointer rounded-lg border border-[#332F2A] bg-[#211F1C] text-sm font-semibold text-[#D7CFC5] transition hover:border-[#B9674B]/50"
+                className="h-12 flex-1 rounded-lg border border-[#332F2A] bg-[#211F1C] px-5 text-sm font-medium text-[#D7CFC5] transition hover:border-[#B9674B]/50 hover:bg-[#25221F]"
               >
                 Go to home
               </button>
             </div>
-          </div>
+
+          </section>
         </main>
       );
     }

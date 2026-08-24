@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-
+import { toast } from "@/components/ui/Toast";
 import { resendOTP, verifyEmail } from "@/services/auth.api";
 
 interface VerifyEmailState {
@@ -17,8 +17,6 @@ export function VerifyEmail() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-  const [error, setError] = useState("");
-  const [resendMessage, setResendMessage] = useState("");
 
   // Registration should always provide the user ID and email.
 
@@ -65,21 +63,20 @@ export function VerifyEmail() {
   // Verify the email OTP.
   const handleVerify = async () => {
     if (otp.length !== 6) {
-      setError("Enter the 6-digit verification code.");
-      return;
-    }
+  toast.error("Enter the 6-digit verification code.");
+  return;
+}
 
     try {
       setLoading(true);
-      setError("");
 
       await verifyEmail({
         userId: state.userId,
         otp,
       });
 
-      // Email verified successfully.
-      // User can now log in.
+      toast.success("Email verified successfully.");
+
       navigate("/login", {
         replace: true,
         state: {
@@ -90,7 +87,7 @@ export function VerifyEmail() {
     } catch (error) {
       console.error("Email verification failed:", error);
 
-      setError("Invalid or expired verification code.");
+      toast.error("Invalid or expired verification code.");
     } finally {
       setLoading(false);
     }
@@ -100,16 +97,12 @@ export function VerifyEmail() {
   const handleResend = async () => {
     try {
       setResending(true);
-      setError("");
-      setResendMessage("");
 
       await resendOTP(state.email);
-
-      setResendMessage("A new verification code has been sent.");
+      toast.success("A new verification code has been sent.");
     } catch (error) {
       console.error("OTP resend failed:", error);
-
-      setError("Unable to resend the verification code.");
+      toast.error("Unable to resend the verification code.");
     } finally {
       setResending(false);
     }
@@ -156,14 +149,6 @@ export function VerifyEmail() {
           className="h-14 w-full rounded-lg border border-[#332F2A] bg-[#211F1C] px-4 text-center text-lg tracking-[0.45em] text-[#F2EDE4] outline-none transition placeholder:tracking-normal placeholder:text-[#706A63] focus:border-[#B9674B]"
         />
       </div>
-
-      {/* Error message. */}
-      {error && <p className="mt-2 text-xs text-[#D98569]">{error}</p>}
-
-      {/* Resend success message. */}
-      {resendMessage && (
-        <p className="mt-2 text-xs text-[#8FAD8F]">{resendMessage}</p>
-      )}
 
       {/* Verify button. */}
       <button

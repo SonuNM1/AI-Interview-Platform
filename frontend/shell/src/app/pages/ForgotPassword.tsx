@@ -1,8 +1,7 @@
-
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
+import { toast } from "@/components/ui/Toast";
 import { useForgotPassword } from "@/app/authQueries";
 import {
   forgotPasswordSchema,
@@ -14,24 +13,32 @@ export function ForgotPassword() {
 
   const forgotPasswordMutation = useForgotPassword();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ForgotPasswordForm>({
+  const { register, handleSubmit } = useForm<ForgotPasswordForm>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
+  const onInvalid = () => {
+    toast.error("Please enter a valid email address.");
+  };
+
   // Send password reset OTP.
+
   const onSubmit = (data: ForgotPasswordForm) => {
     forgotPasswordMutation.mutate(data, {
       onSuccess: () => {
+        toast.success("Verification code sent to your email.");
 
         navigate("/reset-password", {
           state: {
             email: data.email,
           },
         });
+      },
+
+      onError: () => {
+        toast.error(
+          "Unable to send the reset code. Please check your email and try again.",
+        );
       },
     });
   };
@@ -49,16 +56,13 @@ export function ForgotPassword() {
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-[#9E978E]">
-          Enter the email address associated with your account and
-          we'll send you a password reset OTP.
+          Enter the email address associated with your account and we'll send
+          you a password reset OTP.
         </p>
       </div>
 
       {/* Email form. */}
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="space-y-5"
-      >
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-5">
         <div>
           <label
             htmlFor="email"
@@ -74,21 +78,7 @@ export function ForgotPassword() {
             {...register("email")}
             className="h-14 w-full rounded-lg border border-[#332F2A] bg-[#211F1C] px-4 text-sm text-[#F2EDE4] outline-none transition placeholder:text-[#69635C] focus:border-[#B9674B]"
           />
-
-          {errors.email && (
-            <p className="mt-1.5 text-xs text-[#D98569]">
-              {errors.email.message}
-            </p>
-          )}
         </div>
-
-        {/* API error. */}
-        {forgotPasswordMutation.isError && (
-          <p className="text-xs text-[#D98569]">
-            Unable to send the reset OTP. Please check your email
-            and try again.
-          </p>
-        )}
 
         {/* Submit button. */}
         <button

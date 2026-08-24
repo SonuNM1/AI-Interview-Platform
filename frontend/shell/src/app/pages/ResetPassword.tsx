@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
+import { toast } from "@/components/ui/Toast";
 import { useResetPassword } from "@/app/authQueries";
 
 import {
@@ -11,7 +11,6 @@ import {
 } from "@/services/auth.schema";
 
 import { PasswordInput } from "@/components/ui/PasswordInput";
-import { toast } from "@/components/ui/toast";
 
 export function ResetPassword() {
   const navigate = useNavigate();
@@ -27,7 +26,6 @@ export function ResetPassword() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
   } = useForm<ResetPasswordForm>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
@@ -35,7 +33,14 @@ export function ResetPassword() {
     },
   });
 
+  const onInvalid = () => {
+  toast.error(
+    "Please enter a valid email, 6-digit OTP, and new password.",
+  );
+};
+
   // Reset the password.
+
   const onSubmit = (data: ResetPasswordForm) => {
     resetPasswordMutation.mutate(data, {
       onSuccess: () => {
@@ -143,7 +148,7 @@ export function ResetPassword() {
       </div>
 
       <form
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, onInvalid)}
         className="space-y-5"
       >
         {/* Email. */}
@@ -195,7 +200,6 @@ export function ResetPassword() {
           <PasswordInput
             registration={register("newPassword")}
             placeholder="Create a new password"
-            error=""
           />
         </div>
 

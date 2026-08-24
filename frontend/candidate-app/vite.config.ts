@@ -15,7 +15,15 @@ export default defineConfig({
         "./App": "./src/App.tsx",
       },
 
-      shared: ["react", "react-dom"],
+      remotes: {
+        shell: {
+          type: "module",
+          name: "shell",
+          entry: "http://localhost:3000/assets/remoteEntry.js",
+        },
+      },
+
+      shared: ["react", "react-dom", "react-router-dom"],
 
       dts: false,
     }),
