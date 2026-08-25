@@ -84,8 +84,6 @@ export async function resendOTP(email: string) {
   return response.data;
 }
 
-
-
 // Get the currently logged-in user.
 
 export async function getProfile(): Promise<AuthUser> {
@@ -95,6 +93,7 @@ export async function getProfile(): Promise<AuthUser> {
 }
 
 // Logout the current session.
+
 export async function logout() {
   const refreshToken = localStorage.getItem("refreshToken");
 

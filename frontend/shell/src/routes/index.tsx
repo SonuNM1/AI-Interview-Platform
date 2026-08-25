@@ -21,13 +21,9 @@ const MentorApp = lazy(() => import("mentor/App"));
 function Home() {
   return (
     <div>
-      <h1 className="text-3xl font-bold">
-        AI Interview Platform
-      </h1>
+      <h1 className="text-3xl font-bold">AI Interview Platform</h1>
 
-      <p className="mt-2 text-muted-foreground">
-        Welcome to the platform.
-      </p>
+      <p className="mt-2 text-muted-foreground">Welcome to the platform.</p>
     </div>
   );
 }
@@ -35,15 +31,9 @@ function Home() {
 export function AppRoutes() {
   return (
     <BrowserRouter>
-      <Suspense
-        fallback={
-          <Loading message="Loading application..." />
-        }
-      >
+      <Suspense fallback={<Loading message="Loading application..." />}>
         <Routes>
-
-          {/* Public authentication routes.
-              Authenticated users are redirected to their dashboard. */}
+          {/* Public authentication routes */}
           <Route element={<PublicOnlyRoute />}>
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<Login />} />
@@ -54,37 +44,30 @@ export function AppRoutes() {
             </Route>
           </Route>
 
-          {/* Public home page */}
+          {/* Public home */}
           <Route path="/" element={<Home />} />
 
-          {/* Protected application routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route
-              path="/candidate/*"
-              element={<CandidateApp />}
-            />
-
-            <Route
-              path="/recruiter/*"
-              element={<RecruiterApp />}
-            />
-
-            <Route
-              path="/mentor/*"
-              element={<MentorApp />}
-            />
-
-            <Route
-              path="/admin/*"
-              element={<div>Admin App</div>}
-            />
+          {/* Candidate */}
+          <Route element={<ProtectedRoute allowedRole="CANDIDATE" />}>
+            <Route path="/candidate/*" element={<CandidateApp />} />
           </Route>
 
-          <Route
-            path="*"
-            element={<NotFound />}
-          />
+          {/* Recruiter */}
+          <Route element={<ProtectedRoute allowedRole="RECRUITER" />}>
+            <Route path="/recruiter/*" element={<RecruiterApp />} />
+          </Route>
 
+          {/* Mentor */}
+          <Route element={<ProtectedRoute allowedRole="MENTOR" />}>
+            <Route path="/mentor/*" element={<MentorApp />} />
+          </Route>
+
+          {/* Admin */}
+          <Route element={<ProtectedRoute allowedRole="ADMIN" />}>
+            <Route path="/admin/*" element={<div>Admin App</div>} />
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

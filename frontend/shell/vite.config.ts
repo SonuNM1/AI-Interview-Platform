@@ -40,13 +40,17 @@ export default defineConfig({
         },
       },
 
-      exposes: {
-        "./auth": "./src/app/authBridge.ts",
+      shared: {
+        react: {
+          singleton: true,
+        },
+        "react-dom": {
+          singleton: true,
+        },
+        "react-router-dom": {
+          singleton: true,
+        },
       },
-
-      // React is shared between Shell and remote applications.
-
-      shared: ["react", "react-dom"],
 
       dts: false,
     }),

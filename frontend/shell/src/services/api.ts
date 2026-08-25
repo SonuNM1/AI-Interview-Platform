@@ -1,6 +1,7 @@
 import axios from "axios";
 
 // API Gateway is the only backend entry point used by the frontend.
+
 const api = axios.create({
   baseURL: "http://localhost:4000/api/v1",
   headers: {
@@ -9,6 +10,7 @@ const api = axios.create({
 });
 
 // Add the access token to every protected request.
+
 api.interceptors.request.use((config) => {
   const accessToken = localStorage.getItem("accessToken");
 
@@ -20,6 +22,7 @@ api.interceptors.request.use((config) => {
 });
 
 // If access token expires, get a new one using the refresh token.
+
 api.interceptors.response.use(
   (response) => response,
 

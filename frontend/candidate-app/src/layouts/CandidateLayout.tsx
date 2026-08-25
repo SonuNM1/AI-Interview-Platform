@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
-import CandidateNavbar from "../components/CandidateNavbar";
+import { useState, type ReactNode } from "react";
+import { CandidateSidebar } from "../components/ComponentSidebar";
+import { CandidateTopbar } from "../components/CandidateTopbar";
 
 interface CandidateLayoutProps {
   children: ReactNode;
@@ -8,13 +9,41 @@ interface CandidateLayoutProps {
 export function CandidateLayout({
   children,
 }: CandidateLayoutProps) {
-  return (
-    <div className="min-h-screen bg-[#151412] text-[#F2EDE4]">
-      <CandidateNavbar />
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {children}
-      </main>
+  /**
+   * Candidate MFE does not own the Router.
+   * The Shell owns navigation.
+   *
+   * Dispatching this event lets the Shell navigate
+   * without requiring react-router-dom inside the MFE.
+   */
+  const handleNavigate = (path: string) => {
+    window.dispatchEvent(
+      new CustomEvent("shell:navigate", {
+        detail: { path },
+      }),
+    );
+  };
+
+  return (
+    <div className="flex min-h-screen bg-[#151412] text-[#F2EDE4]">
+      <CandidateSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNavigate={handleNavigate}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <CandidateTopbar
+          onMenuClick={() => setSidebarOpen(true)}
+          onNavigate={handleNavigate}
+        />
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
