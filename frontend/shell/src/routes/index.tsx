@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 
 import { Loading } from "@/components/Loading";
 import { AuthLayout } from "@/layouts/AuthLayout";
@@ -18,6 +18,28 @@ const CandidateApp = lazy(() => import("candidate/App"));
 const RecruiterApp = lazy(() => import("recruiter/App"));
 const MentorApp = lazy(() => import("mentor/App"));
 
+function ShellNavigationListener() {
+  const navigate = useNavigate() ; 
+
+  useEffect(() => {
+    const handleShellNavigate = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        path: string ; 
+      }> ; 
+
+      navigate(customEvent.detail.path)
+    }
+
+    window.addEventListener("shell:navigate", handleShellNavigate) ; 
+
+    return ()  => {
+      window.removeEventListener("shell:navigate", handleShellNavigate)
+    }
+  }, [navigate]) ; 
+
+  return null ; 
+}
+
 function Home() {
   return (
     <div>
@@ -31,6 +53,7 @@ function Home() {
 export function AppRoutes() {
   return (
     <BrowserRouter>
+      <ShellNavigationListener/>
       <Suspense fallback={<Loading message="Loading application..." />}>
         <Routes>
           {/* Public authentication routes */}

@@ -213,6 +213,7 @@ export const uploadAvatarController = async (
     const uploadedFile = await uploadFileToFileService(
       req.file,
       req.headers["x-user-id"] as string,
+      req.headers["x-user-role"] as string,
     );
 
     // save new avatar id in PostgreSQL
@@ -226,7 +227,11 @@ export const uploadAvatarController = async (
 
     if (oldAvatarFileId) {
       try {
-        await deleteFileFromFileService(oldAvatarFileId);
+        await deleteFileFromFileService(
+          oldAvatarFileId,
+          req.headers["x-user-id"] as string,
+          req.headers["x-user-role"] as string,
+        );
       } catch (error) {
         console.error("Failed to delete old avatar: ", error);
       }
@@ -272,6 +277,7 @@ export const uploadResumeController = async (
     const uploadedFile = await uploadFileToFileService(
       req.file,
       req.headers["x-user-id"] as string,
+      req.headers["x-user-role"] as string,
     );
 
     // Save new resume id
@@ -285,7 +291,11 @@ export const uploadResumeController = async (
 
     if (oldResumeFileId) {
       try {
-        await deleteFileFromFileService(oldResumeFileId);
+        await deleteFileFromFileService(
+          oldResumeFileId, 
+          req.headers["x-user-id"] as string, 
+          req.headers["x-user-role"] as string 
+        );
       } catch (error) {
         console.error("Failed to delete old resume:", error);
       }

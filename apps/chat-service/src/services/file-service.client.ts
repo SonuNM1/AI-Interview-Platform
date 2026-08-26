@@ -26,7 +26,8 @@ export const uploadAttachment = async (
         {
             headers: {
                 ...formData.getHeaders(), 
-                "x-user-id": uploadedBy
+                "x-user-id": uploadedBy, 
+                "x-user-role": userRole
             }
         }
     );
