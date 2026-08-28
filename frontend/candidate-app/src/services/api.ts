@@ -25,7 +25,6 @@ declare global {
   }
 }
 
-
 /* Request interceptor - Before every request: Candidate → asks Shell for access token → attaches token → sends request */
 
 api.interceptors.request.use((config) => {

@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FaGithub, FaLinkedin, FaPhoneAlt } from "react-icons/fa";
 import { IoLocationSharp } from "react-icons/io5";
 import { IoIosMail } from "react-icons/io";
-import { FiCamera } from "react-icons/fi";
+import { FiCamera, FiLogOut } from "react-icons/fi";
 import {
   getMyProfile,
   updateMyProfile,
@@ -10,28 +11,89 @@ import {
   uploadResume,
   getFileSignedUrl,
   getFileMetadata,
-  type UserProfile,
   type UpdateUserProfileData,
 } from "../services/user.api";
 import { toast } from "sonner";
-import axios from "axios";
 
 export function Profile() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient(); // access tanstack cache so we can invalidate server data after profile changes
 
   const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const [resumeUploading, setResumeUploading] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
-  const [resumeFileName, setResumeFileName] = useState<string | null>(null) ; // stores the original filename of the uploaded resume 
-  const [resumeFileType, setResumeFileType] = useState<string | null>(null) ; 
-
   const [formData, setFormData] = useState<UpdateUserProfileData>({});
+
+  // Fetch the authenticated candidate's profile. TanStack Query handles loading, caching, errors, refetching and keeping the server state available
+
+  const {
+    data: profile,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getMyProfile,
+  });
+
+  // Updates the candidate profile on the server. After success, the profile query is invalidated so TanStack Query fetches the latest saved profile
+
+  const updateProfileMutation = useMutation({
+    mutationFn: updateMyProfile, // sends the edited profile data to the backend
+
+    // the backend profile is now changed, so the cached profile may contain old data
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["profile"],
+      });
+
+      setIsEditing(false);
+
+      toast.success("Profile updated successfully.");
+    },
+
+    onError: (error) => {
+      console.error("Failed to update profile: ", error);
+
+      toast.error("Failed to update profile.");
+    },
+  });
+
+  // uploads a new profile avatar and refreshes the profile query so the new avatarField is available
+
+  const avatarMutation = useMutation({
+    mutationFn: uploadAvatar, // uploads the new avatar and updates the user's avatarFileId
+
+    // the profile now contains a new avatarFileId so refresh the cached profile
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["profile"],
+      });
+
+      toast.success("Profile picture updated successfully.");
+    },
+
+    onError: (error) => {
+      console.error("Failed to upload avatar: ", error);
+
+      toast.error("Failed to update profile picture.");
+    },
+  });
+
+  // generate a temporary signed URL for the private avatar. The query only runs when an avatar exists
+
+  const avatarUrlQuery = useQuery({
+    queryKey: ["file-signed-url", profile?.avatarFileId],
+    queryFn: () => getFileSignedUrl(profile!.avatarFileId!),
+    enabled: !!profile?.avatarFileId,
+  });
+
+  // Fetch resume metadata so the UI can display the actual uploaded filename and file type
+
+  const resumeMetadataQuery = useQuery({
+    queryKey: ["file-metadata", profile?.resumeFileId],
+    queryFn: () => getFileMetadata(profile!.resumeFileId!),
+    enabled: !!profile?.resumeFileId,
+  });
 
   const handleFieldChange = (
     field: keyof UpdateUserProfileData,
@@ -43,136 +105,63 @@ export function Profile() {
     }));
   };
 
-  // Fetch the logged-in candidate's profile when the page is opened.
+  // ask the shell to handle logout - The candidate MFE doesn't call the logout API directly
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const data = await getMyProfile();
-
-        setProfile(data);
-
-        // fetch resume metadata separately because the user profile only stores the resume file ID, not the original filename 
-
-        if(data.resumeFileId) {
-          try {
-            const resumeFile = await getFileMetadata(data.resumeFileId) ; 
-
-            setResumeFileName(resumeFile.originalName) ; 
-            setResumeFileType(resumeFile.extension.toLowerCase())
-          } catch (error) {
-            console.error("Failed to load resume metadata: ", error) ; 
-
-            setResumeFileName(null) ; 
-          } 
-        } else {
-          setResumeFileName(null) ;
-          setResumeFileType(null) ; 
-        }
-
-        if (data.avatarFileId) {
-          try {
-            const url = await getFileSignedUrl(data.avatarFileId);
-
-            setAvatarUrl(url);
-          } catch (error) {
-            console.error("Failed to load avatar: ", error);
-
-            setAvatarUrl(null);
-          }
-        } else {
-          setAvatarUrl(null);
-        }
-
-        setFormData({
-          username: data.username ?? "",
-          firstName: data.firstName ?? "",
-          lastName: data.lastName ?? "",
-          phone: data.phone ?? "",
-          headline: data.headline ?? "",
-          location: data.location ?? "",
-          bio: data.bio ?? "",
-          github: data.github ?? "",
-          linkedin: data.linkedin ?? "",
-        });
-      } catch (error) {
-        console.error("Failed to fetch candidate profile:", error);
-
-        setError("Unable to load your profile. Please try again.");
-
-        toast.error("Unable to load your profile.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, []);
-
-  const handleAvatarUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Please select a JPG, PNG, or WebP image");
-
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Image must be smaller than 10 MB");
-      event.target.value = "";
-      return;
-    }
-
+  const handleLogout = async () => {
     try {
-      setAvatarUploading(true);
-
-      const updatedProfile = await uploadAvatar(file);
-      setProfile(updatedProfile);
-
-      if (updatedProfile.avatarFileId) {
-        const url = await getFileSignedUrl(updatedProfile.avatarFileId);
-
-        setAvatarUrl(url);
-      }
-
-      toast.success("Profile picture updated successfully.");
+      await window.__AUTH_BRIDGE__?.logout();
     } catch (error) {
-      console.error("Failed to upload avatar: ", error);
+      console.error("Logout failed: ", error);
 
-      toast.error("Failed to update profile picture. Please try again.");
-    } finally {
-      setAvatarUploading(false);
-      event.target.value = "";
+      toast.error("Unable to log out. Please try again.");
     }
   };
 
-  const handleResumeUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
+
+    avatarMutation.mutate(file);
+
+    event.target.value = ""; // allows selecting the same file again later
+  };
+
+  const resumeMutation = useMutation({
+    mutationFn: uploadResume, // uploads/replaces the candidate's resume
+
+    // the profile now contains the new resumeFileId, so refresh the cached profile
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["profile"],
+      });
+
+      toast.success("Resume uploaded successfully.");
+    },
+
+    onError: (error) => {
+      console.error("Failed to upload resume: ", error);
+
+      toast.error("Failed to upload resume.");
+    },
+  });
+
+  const handleResumeUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    // allow PDF, old word .doc, and modern word .docx
 
     const allowedTypes = [
       "application/pdf",
       "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // browser's MIME type for a .docx word document
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Please upload a PDF, DOC, or DOCX file");
-
+      toast.error("Please upload a PDF, DOC, or DOCX file.");
       event.target.value = "";
       return;
     }
@@ -183,91 +172,38 @@ export function Profile() {
       return;
     }
 
+    resumeMutation.mutate(file);
+    event.target.value = "";
+  };
+
+  const extension = resumeMetadataQuery.data?.extension?.toLowerCase();
+
+  // generate a temporary signed URL for the private resume and open the resume in a new browser tab
+
+  const handleResumeOpen = async () => {
+    if (!profile?.resumeFileId) return;
+
     try {
-      setResumeUploading(true);
+      const url = await queryClient.fetchQuery({
+        queryKey: ["file-signed-url", profile.resumeFileId],
+        queryFn: () => getFileSignedUrl(profile.resumeFileId!),
+      });
 
-      const updatedProfile = await uploadResume(file);
-
-      setProfile(updatedProfile);
-
-      // fetch the new resume's filename after the upload. The profile only stores the file ID
-
-      if(updatedProfile.resumeFileId) {
-        const resumeFile = await getFileMetadata(updatedProfile.resumeFileId) ; 
-
-        setResumeFileName(resumeFile.originalName)
-        setResumeFileType(resumeFile.extension.toLowerCase())
-      }
-
-      toast.success(
-        updatedProfile.resumeFileId
-          ? "Resume uploaded successfully"
-          : "Resume updated successfully",
-      );
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch (error) {
-      console.error("Failed to upload resume: ", error);
+      console.error("Failed to open resume:", error);
 
-      toast.error("Failed to upload resume. Please try again.");
-    } finally {
-      setResumeUploading(false);
-      event.target.value = "";
+      toast.error("Unable to open resume.");
     }
   };
 
-  // generate a temporary signed URL for the private resume and open the resume in a new browser tab 
-
-  const handleResumeOpen = async () => {
-    if(!profile?.resumeFileId) return ; 
-
-    try {
-      const url = await getFileSignedUrl(profile.resumeFileId) ; 
-
-      window.open(url, "_blank", "noopener, noreferrer") ; 
-    } catch (error) {
-      console.error("Failed to open resume: ", error) ; 
-
-      toast.error("Unable to open resume. Please try again")
-    }
-  }
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-
-      const updatedProfile = await updateMyProfile(formData);
-
-      setProfile(updatedProfile);
-
-      setFormData({
-        username: updatedProfile.username ?? "",
-        firstName: updatedProfile.firstName ?? "",
-        lastName: updatedProfile.lastName ?? "",
-        phone: updatedProfile.phone ?? "",
-        headline: updatedProfile.headline ?? "",
-        location: updatedProfile.location ?? "",
-        bio: updatedProfile.bio ?? "",
-        github: updatedProfile.github ?? "",
-        linkedin: updatedProfile.linkedin ?? "",
-      });
-
-      setIsEditing(false);
-      toast.success("Profile updated successfully");
-    } catch (error) {
-      console.error("Failed to update profile: ", error);
-
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
-        toast.error(error.response.data?.message ?? "Username already taken");
-      } else {
-        toast.error("Failed to update your profile. Please try again");
-      }
-    } finally {
-      setSaving(false);
-    }
+  const handleSave = () => {
+    updateProfileMutation.mutate(formData);
   };
 
   // Loading state.
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="mx-auto max-w-5xl">
         <div className="rounded-2xl border border-[#2F2B27] bg-[#1B1917] p-8">
@@ -279,7 +215,7 @@ export function Profile() {
 
   //Error state.
 
-  if (error || !profile) {
+  if (isError || !profile) {
     return (
       <div className="mx-auto max-w-5xl">
         <div className="rounded-2xl border border-[#3A2C28] bg-[#1B1917] p-8">
@@ -288,7 +224,9 @@ export function Profile() {
           </h1>
 
           <p className="mt-2 text-sm text-[#918A82]">
-            {error ?? "We could not find your profile."}
+            {error instanceof Error
+              ? error.message
+              : "We could not find your profile."}
           </p>
         </div>
       </div>
@@ -299,9 +237,8 @@ export function Profile() {
     [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
     "Candidate";
 
-  /**
-   * Generate initials for the avatar placeholder.
-   */
+  /* Generate initials for the avatar placeholder */
+
   const initials =
     [profile.firstName, profile.lastName]
       .filter(Boolean)
@@ -310,9 +247,7 @@ export function Profile() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      {/* =====================================================
-          PAGE HEADER
-      ===================================================== */}
+      {/* page header */}
 
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -352,10 +287,10 @@ export function Profile() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={saving}
+                disabled={updateProfileMutation.isPending}
                 className="cursor-pointer rounded-lg bg-[#B9674B] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#A85C42] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving ? "Saving..." : "Save Changes"}
+                {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
               </button>
             </>
           ) : (
@@ -378,9 +313,9 @@ export function Profile() {
 
           <div className="relative h-24 w-24 shrink-0">
             <div className="flex h-24 w-24 overflow-hidden items-center justify-center rounded-full bg-[#B9674B] text-2xl font-semibold text-[#F8F3EC]">
-              {avatarUrl ? (
+              {avatarUrlQuery.data ? (
                 <img
-                  src={avatarUrl}
+                  src={avatarUrlQuery.data || undefined}
                   alt="Profile"
                   className="h-full w-full object-cover"
                 />
@@ -401,12 +336,10 @@ export function Profile() {
       transition
       hover:bg-[#A85C42]"
             >
-              {avatarUploading ? (
-                <span className="text-xs">
-                  ...
-                </span>
-              ): (
-                <FiCamera className="h-4 w-4"/>
+              {avatarMutation.isPending ? (
+                <span className="text-xs">...</span>
+              ) : (
+                <FiCamera className="h-4 w-4" />
               )}
             </label>
 
@@ -416,7 +349,7 @@ export function Profile() {
               accept="image/jpeg, image/png, image/webp"
               onChange={handleAvatarUpload}
               className="hidden"
-              disabled={avatarUploading}
+              disabled={avatarMutation.isPending}
             />
           </div>
 
@@ -450,9 +383,7 @@ export function Profile() {
         </div>
       </section>
 
-      {/* =====================================================
-          PERSONAL INFORMATION
-      ===================================================== */}
+      {/* personal information */}
 
       <section className="rounded-2xl border border-[#2F2B27] bg-[#1B1917]">
         <div className="border-b border-[#2F2B27] px-6 py-5">
@@ -599,69 +530,108 @@ export function Profile() {
         </div>
 
         {profile.resumeFileId ? (
-
-          // resume exists - show the uploaded file 
+          // resume exists - show the uploaded file
 
           <div className="flex items-center justify-between gap-4 border-t border-[#2F2B27] p-6">
-
             {/* clicking the file opens the resume in a new browser tab */}
 
-            <button type="button" onClick={handleResumeOpen} className="flex min-w-0 items-center gap-4 text-left transition hover:opacity-80 cursor-pointer">
-
+            <button
+              type="button"
+              onClick={handleResumeOpen}
+              className="flex min-w-0 items-center gap-4 text-left transition hover:opacity-80 cursor-pointer"
+            >
               {/* file type indicator */}
 
               <div className="flex h-16 w-14 shrink-0 items-center justify-center rounded-md bg-[#D71920] text-sm font-bold text-white">
-                {resumeFileType === ".pdf" ? "PDF" : resumeFileType === ".doc" ? "DOC": resumeFileType === ".docx" ? "DOCX": "FILE"} 
+                {extension === ".pdf"
+                  ? "PDF"
+                  : extension === ".doc"
+                    ? "DOC"
+                    : extension === ".docx"
+                      ? "DOCX"
+                      : "FILE"}
               </div>
 
               {/* resume filename */}
 
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-[#F2EDE4]">
-                  {resumeFileName ?? "Resume"}
+                  {resumeMetadataQuery.data?.originalName ?? "Resume"}
                 </p>
                 <p className="mt-1 text-xs text-[#817A72]">
-                  Click to open resume 
+                  Click to open resume
                 </p>
               </div>
             </button>
 
             {/* replace resume button */}
 
-            <label htmlFor="resume-upload" className="shrink-0 cursor-pointer rounded-lg border border-[#484039] px-5 py-3 text-sm font-medium text-[#F2EDE4] transition hover:bg-[#24211E]">
-              {resumeUploading ? "Uploading..." : "Upload Resume "}
+            <label
+              htmlFor="resume-upload"
+              className="shrink-0 cursor-pointer rounded-lg border border-[#484039] px-5 py-3 text-sm font-medium text-[#F2EDE4] transition hover:bg-[#24211E]"
+            >
+              {resumeMutation.isPending ? "Uploading..." : "Upload Resume "}
             </label>
 
             {/* hidden file input */}
 
-            <input id="resume-upload" type="file" accept=".pdf, .doc, .docx" className="hidden" onChange={handleResumeOpen} disabled={resumeUploading} />
+            <input
+              id="resume-upload"
+              type="file"
+              accept=".pdf, .doc, .docx"
+              className="hidden"
+              onChange={handleResumeUpload}
+              disabled={resumeMutation.isPending}
+            />
           </div>
-        ): (
-
-          // no resume exists - show the upload state 
+        ) : (
+          // no resume exists - show the upload state
 
           <div className="flex items-center justify-between gap-4 border-t border-[#2F2B27] p-6">
             <div>
               <h3 className="text-sm font-semibold text-[#F2EDE4]">
-                No resume uploaded 
+                No resume uploaded
               </h3>
               <p className="mt-1 text-sm text-[#817A72]">
-                Upload your latest resume to complete your profile 
+                Upload your latest resume to complete your profile
               </p>
             </div>
 
             {/* upload resume button */}
 
-            <label htmlFor="resume-upload" className="cursor-pointer rounded-lg bg-[#B9674B] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#A85C42]">
-              {resumeUploading ? "Uploading..." : "Upload Resume"}
+            <label
+              htmlFor="resume-upload"
+              className="cursor-pointer rounded-lg bg-[#B9674B] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#A85C42]"
+            >
+              {resumeMutation.isPending ? "Uploading..." : "Upload Resume"}
             </label>
 
             {/* hidden file input */}
 
-            <input id="resume-upload" type="file" accept=".pdf, .doc, .docx" className="hidden" onChange={handleResumeUpload} disabled={resumeUploading}/>
+            <input
+              id="resume-upload"
+              type="file"
+              accept=".pdf, .doc, .docx"
+              className="hidden"
+              onChange={handleResumeUpload}
+              disabled={resumeMutation.isPending}
+            />
           </div>
         )}
       </section>
+
+      {/* logout */}
+
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex cursor-pointer items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
+        >
+          <FiLogOut className="h-4 w-4" />
+          Sign Out
+        </button>
+      </div>
     </div>
   );
 }

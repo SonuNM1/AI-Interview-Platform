@@ -6,6 +6,7 @@ import {
 import {
   deleteInterviewService,
   getAllInterviewsService,
+  getCandidateInterviewsService,
   publishInterviewService,
   updateInterviewService,
 } from "../services/interview.service.js";
@@ -238,3 +239,36 @@ export const publishInterview = async (req: Request, res: Response) => {
     });
   }
 };
+
+// returns all interviews assigned to the currently authenticated candidate 
+
+export const getCandidateInterviews = async (
+  req: Request, 
+  res: Response 
+) => {
+  try {
+    const candidateId = req.headers["x-user-id"] as string; // API gateway forwards the authenticated user's ID through this header 
+
+    if(!candidateId) {
+      return res.status(401).json({
+        success: false, 
+        message: "Authenticated user ID missing"
+      })
+    }
+
+    const interviews = await getCandidateInterviewsService(candidateId) ; 
+
+    return res.status(200).json({
+      success: true, 
+      count: interviews.length, 
+      data: interviews 
+    })
+  } catch (error) {
+    console.error("Get candidate interviews error: ", error) ; 
+
+    return res.status(500).json({
+      success: false, 
+      message: error instanceof Error ? error.message: "Internal Server Error"
+    })
+  }
+}

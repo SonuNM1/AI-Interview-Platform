@@ -8,6 +8,7 @@ import chatRoutes from "./routes/chat.routes.js";
 import interviewRoutes from "./routes/interview.routes.js";
 import publicInterviewRoutes from "./routes/public-interview.routes.js";
 import mockInterviewRoutes from "./routes/mock-interview.routes.js";
+import candidateInterviewRoutes from "./routes/candidate-interview.routes.js";
 
 const app = express();
 
@@ -40,6 +41,10 @@ app.use("/api/v1/interviews", interviewRoutes);
 app.use("/api/v1/public/interviews", publicInterviewRoutes);
 
 app.use("/api/v1/mock-interviews", mockInterviewRoutes);
+
+// Candidate interview routes.
+
+app.use("/api/v1/candidate/interviews", candidateInterviewRoutes);
 
 app.use(express.json());
 

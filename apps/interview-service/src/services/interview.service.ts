@@ -103,3 +103,13 @@ export const publishInterviewService = async (
     await interview.save() ; 
     return interview; 
 }
+
+// returns all interviews assigned to the authenticated candidate 
+
+export const getCandidateInterviewsService = async (candidateId: string) => {
+    return await Interview.find({
+        candidateId 
+    }).sort({
+        createdAt: -1
+    })
+}

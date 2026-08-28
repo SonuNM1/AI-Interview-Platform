@@ -16,7 +16,7 @@ export const createInterviewSchema = z.object({
         "SYSTEM_DESIGN", 
         "DSA"
     ]),
-    candidateId: z.string().optional()
+    candidateId: z.string().min(1)
 })
 
 // Only recruiter-editable fields are allowed. System-managed fields (status, score, feedback, timestamps, etc.) cannot be updated manually 

@@ -11,7 +11,10 @@
   },
   "dependencies": {
     "@module-federation/vite": "^1.20.7",
+    "@pixiv/three-vrm": "^3.5.5",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-query-devtools": "^5.102.3",
     "axios": "^1.18.1",
     "lucide-react": "^1.33.0",
     "react": "^19.2.8",
@@ -19,7 +22,8 @@
     "react-icons": "^5.7.0",
     "react-router-dom": "^7.18.2",
     "sonner": "^2.0.8",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
