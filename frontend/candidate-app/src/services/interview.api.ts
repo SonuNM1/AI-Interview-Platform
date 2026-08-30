@@ -69,16 +69,46 @@ export async function getFirstQuestion(accessToken: string) {
 export async function submitCandidateAnswer(
     accessToken: string, 
     questionNumber: number, 
-    candidateAnswer: string, 
-    answerTranscript: string, 
+    audioBlob: Blob, 
     duration: number 
 ) {
-    const response = await api.post(`/public/interviews/${accessToken}/questions/answer`, {
-        questionNumber, 
-        candidateAnswer, 
-        answerTranscript, 
-        duration
-    }) ; 
+    const formData = new FormData() ; // creatig multipart/form-data because we are uploading the audio file
 
-    return response.data ; 
+    // attach the recorded WebM audio 
+
+    formData.append(
+        "audio", 
+        audioBlob, 
+        `question-${questionNumber}.webm`
+    )
+
+    formData.append("questionNumber", String(questionNumber)) ; // attach interview metadata 
+
+    formData.append("duration", String(duration)) ; 
+
+    // send the audio and metadata to the Interview Service 
+
+    const response = await api.post(
+    `/public/interviews/${accessToken}/questions/answer`,
+    formData,
+  );
+
+    return response.data ; // returning the backend response 
+}
+
+// Tell the Interview Service that the candidate wants to skip the current question.
+
+export async function skipCandidateQuestion(
+  accessToken: string,
+  questionNumber: number,
+) {
+
+  const response = await api.post(
+    `/public/interviews/${accessToken}/questions/skip`,
+    {
+      questionNumber,
+    },
+  );
+
+  return response.data;
 }

@@ -1,60 +1,104 @@
-// browser speech recognition wrapper - converts the candidate's microphone speech into text 
+// Browser Speech Recognition API wrapper.
+// This keeps microphone/transcription logic outside InterviewRoom.
 
-type SpeechRecognitionResult = {
-    transcript: string ; 
-    isFinal: boolean ; 
+export interface BrowserSpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+
+  start: () => void;
+  stop: () => void;
+
+  onresult:
+    | ((event: SpeechRecognitionEvent) => void)
+    | null;
+
+  onerror:
+    | ((event: Event) => void)
+    | null;
+
+  onend: (() => void) | null;
 }
 
-interface SpeechRecognitionCallbacks {
-    onResult?: (result: SpeechRecognitionResult) => void ; 
-    onEnd?: () => void ; 
-    onError?: (error: string) => void 
+// Type definition for the browser SpeechRecognition constructor.
+type SpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+// Some browsers expose the API as SpeechRecognition,
+// while Chromium-based browsers commonly expose webkitSpeechRecognition.
+interface SpeechRecognitionWindow {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
 }
 
-export function createSpeechRecognition(
-    callbacks: SpeechRecognitionCallbacks
-) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition ;
-    
-    if(!SpeechRecognition) {
-        throw new Error("Speech recognnition is not supported in this browser.") ; 
+// Creates and configures the browser speech recognition instance.
+export function createSpeechRecognition(callbacks: {
+  onResult?: (result: {
+    transcript: string;
+    isFinal: boolean;
+  }) => void;
+
+  onEnd?: () => void;
+
+  onError?: (error: string) => void;
+}) {
+  // Cast window to our small compatibility interface instead of using `any`.
+  const speechWindow =
+    window as unknown as SpeechRecognitionWindow;
+
+  const SpeechRecognition =
+    speechWindow.SpeechRecognition ??
+    speechWindow.webkitSpeechRecognition;
+
+  // Stop with a clear error if the browser does not support speech recognition.
+  if (!SpeechRecognition) {
+    throw new Error(
+      "Speech recognition is not supported in this browser.",
+    );
+  }
+
+  const recognition = new SpeechRecognition();
+
+  // Keep listening while the candidate is speaking.
+  recognition.continuous = true;
+
+  // Return interim results so we can show live transcription.
+  recognition.interimResults = true;
+
+  // Interview language.
+  recognition.lang = "en-US";
+
+  // Handle live and final speech recognition results.
+  recognition.onresult = (event) => {
+    for (
+      let index = event.resultIndex;
+      index < event.results.length;
+      index++
+    ) {
+      const result = event.results[index];
+
+      callbacks.onResult?.({
+        transcript: result[0].transcript,
+        isFinal: result.isFinal,
+      });
     }
+  };
 
-    const recognition = new SpeechRecognition() ; 
+  // Handle microphone/speech recognition errors.
+  recognition.onerror = (event) => {
+    console.error(
+      "Speech recognition error:",
+      event,
+    );
 
-    // Continue listening while the candidate is speaking 
+    callbacks.onError?.(
+      "Speech recognition failed.",
+    );
+  };
 
-    recognition.continuous = true ; 
+  // Notify InterviewRoom when recognition stops.
+  recognition.onend = () => {
+    callbacks.onEnd?.();
+  };
 
-    // return both interim and final transcription 
-
-    recognition.interimResults = true ; 
-
-    recognition.lang = "en-US" ; // use english for the interview 
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-        for (let index = event.resultIndex; index < event.results.length ; index++) {
-            
-            const result = event.results[index] ; 
-
-            const transcript = result[0].transcript ; 
-
-            callbacks.onResult?.({
-                transcript, 
-                isFinal: result.isFinal 
-            })
-        }
-    }
-
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("Speech recognition error: ", event.error) ; 
-
-        callbacks.onError?.(event.error) ; 
-    }
-
-    recognition.onend = () => {
-        callbacks.onEnd?.() ; 
-    }
-
-    return recognition ; 
+  return recognition;
 }

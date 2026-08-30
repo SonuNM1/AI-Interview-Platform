@@ -8,6 +8,7 @@ import {
   getAllInterviewsService,
   getCandidateInterviewsService,
   publishInterviewService,
+  skipInterviewQuestionService,
   updateInterviewService,
 } from "../services/interview.service.js";
 import {
@@ -272,3 +273,47 @@ export const getCandidateInterviews = async (
     })
   }
 }
+
+// skip question 
+
+export const skipInterviewQuestion = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const accessToken = req.params.accessToken as string;
+
+    const questionNumber = Number(req.body.questionNumber);
+
+    if (!Number.isInteger(questionNumber) || questionNumber < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid question number is required",
+      });
+    }
+
+    const result = await skipInterviewQuestionService(
+      accessToken,
+      questionNumber,
+    );
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error(
+      "Skip Interview Question Error:",
+      error,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Internal Server Error",
+    });
+  }
+};

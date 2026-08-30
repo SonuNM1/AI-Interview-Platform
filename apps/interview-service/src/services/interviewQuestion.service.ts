@@ -3,7 +3,10 @@ import InterviewQuestion, {
   GeneratedBy,
   QuestionType,
 } from "../models/interviewQuestion.model.js";
-import { evaluateCandidateAnswer, generateQuestion } from "../helpers/questionGenerator.helper.js";
+import {
+  evaluateCandidateAnswer,
+  generateQuestion,
+} from "../helpers/questionGenerator.helper.js";
 
 export const getFirstQuestionService = async (accessToken: string) => {
   // finding interview
@@ -113,48 +116,103 @@ export const submitCandidateAnswerService = async (
   }
 
   question.candidateAnswer = candidateAnswer;
-
   question.answerTranscript = answerTranscript;
-
   question.duration = duration;
-
   question.answeredAt = new Date();
 
-  // evaluating the submitted answer using AI 
+  // evaluating the submitted answer using AI
 
   const evaluation = await evaluateCandidateAnswer({
-    question: question.question, 
-    candidateAnswer
-  })
+    question: question.question,
+    candidateAnswer,
+  });
 
-  // saving AI evaluation 
+  // saving AI evaluation
 
-  question.score = evaluation.score ; 
-  question.feedback = evaluation.feedback ; 
+  question.score = evaluation.score;
+  question.feedback = evaluation.feedback;
 
   // saving the updated question
 
   await question.save();
 
-  // updating the interview's overall score 
-  
+  // if this was the final question, complete the interview
+
+  if (questionNumber >= interview.totalQuestions) {
+    interview.status = InterviewStatus.COMPLETED;
+    interview.completedAt = new Date();
+
+    // calculate final interview score 
+
+    const answeredQuestions = await InterviewQuestion.find({
+      interviewId: interview._id, 
+      score: {$ne: null}
+    })
+
+    const totalScore = answeredQuestions.reduce(
+      (sum, currentQuestion) => sum + (currentQuestion.score ?? 0), 0
+    ) ; 
+
+    interview.score = answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0 ; 
+
+    await interview.save();
+
+    return {
+      success: true,
+      interviewCompleted: true,
+      data: {
+        transcript: answerTranscript,
+        score: evaluation.score,
+        feedback: evaluation.feedback,
+      },
+    };
+  }
+
+  // generate the next question after successfully saving the current canddiate answer
+
+  const generatedQuestion = await generateQuestion({
+    interview,
+    previousQuestion: question,
+    previousAnswer: answerTranscript,
+  });
+
+  // Create the next question in MongoDB.
+
+  const nextQuestion = await InterviewQuestion.create({
+    interviewId: interview._id,
+    questionNumber: questionNumber + 1,
+    question: generatedQuestion.question,
+    type: generatedQuestion.type,
+    generatedBy: GeneratedBy.AI,
+  });
+
+  // updating the interview's overall score
+
   const answeredQuestions = await InterviewQuestion.find({
-    interviewId: interview._id, 
+    interviewId: interview._id,
     score: {
-      $ne: null 
-    }
-  }) ; 
+      $ne: null,
+    },
+  });
 
   const totalScore = answeredQuestions.reduce(
-    (sum, question) => sum + (question.score ?? 0), 0,
-  )
+    (sum, question) => sum + (question.score ?? 0),
+    0,
+  );
 
-  interview.score = totalScore / answeredQuestions.length ; 
+  interview.score = totalScore / answeredQuestions.length;
 
-  await interview.save() ; 
+  await interview.save();
 
   return {
     success: true,
+    interviewCompleted: false, 
+    data: {
+      transcript: answerTranscript,
+      score: evaluation.score,
+      feedback: evaluation.feedback,
+      nextQuestion 
+    },
   };
 };
 
@@ -216,20 +274,20 @@ export const getNextQuestionService = async (accessToken: string) => {
   }
 
   const totalQuestions = await InterviewQuestion.countDocuments({
-    interviewId: interview._id 
-  }) ; 
+    interviewId: interview._id,
+  });
 
-  if(totalQuestions >= interview.totalQuestions) {
-    interview.status = InterviewStatus.COMPLETED ; 
+  if (totalQuestions >= interview.totalQuestions) {
+    interview.status = InterviewStatus.COMPLETED;
 
-    interview.completedAt = new Date() ; 
+    interview.completedAt = new Date();
 
-    await interview.save() ; 
+    await interview.save();
 
     return {
-      success: true, 
-      interviewCompleted: true 
-    }
+      success: true,
+      interviewCompleted: true,
+    };
   }
 
   const nextQuestionNumber = lastQuestion.questionNumber + 1;
@@ -250,7 +308,7 @@ export const getNextQuestionService = async (accessToken: string) => {
     generatedBy: GeneratedBy.AI,
   });
 
-  // checking whether the interview has reached its maximum number of questions 
+  // checking whether the interview has reached its maximum number of questions
 
   return {
     success: true,
@@ -313,4 +371,3 @@ export const submitInterviewService = async (accessToken: string) => {
     success: true,
   };
 };
-

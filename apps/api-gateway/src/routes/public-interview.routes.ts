@@ -20,6 +20,8 @@ router.post("/:accessToken/questions/answer", publicInterviewProxy);
 
 router.post("/:accessToken/questions/next", publicInterviewProxy);
 
+router.post("/:accessToken/questions/skip", publicInterviewProxy)
+
 router.post("/:accessToken/submit", publicInterviewProxy);
 
 router.get("/interview-report/:accessToken", publicInterviewProxy);
