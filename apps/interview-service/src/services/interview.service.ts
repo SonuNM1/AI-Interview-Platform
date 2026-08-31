@@ -1,13 +1,37 @@
 import Interview, { InterviewStatus } from "../models/interview.model.js";
 import crypto from "crypto";
-import InterviewQuestion, { GeneratedBy } from "../models/interviewQuestion.model.js";
+import InterviewQuestion, {
+  GeneratedBy,
+} from "../models/interviewQuestion.model.js";
 import { generateQuestion } from "../helpers/questionGenerator.helper.js";
+import { publishEvent, InterviewEventType } from "@repo/shared-rabbitmq";
+import {
+  isInterviewTimeExpired,
+  completeInterviewByTime,
+} from "../helpers/interviewTime.helper.js";
 
 export const createInterviewService = async (data: any) => {
-  return await Interview.create({
+  const interview = await Interview.create({
     ...data,
-    totalQuestions: data.totalQuestions ?? 10,
+    status: InterviewStatus.SCHEDULED,
+    totalQuestions: 5,
   });
+
+  await publishEvent("interview_events", {
+    type: InterviewEventType.INTERVIEW_SCHEDULED,
+
+    interviewId: interview._id.toString(),
+
+    candidateId: interview.candidateId,
+
+    title: interview.title,
+
+    scheduledAt: interview.scheduledAt,
+
+    duration: interview.duration,
+  });
+
+  return interview;
 };
 
 export const getInterviewByIdService = async (id: string, userId: string) => {
@@ -54,14 +78,6 @@ export const deleteInterviewService = async (id: string, userId: string) => {
   });
 };
 
-/*
- Publish Interview - an interview is first created as a DRAFT so recruiters can review and modify it. 
- 
- Create Interview -> DRAFT -> Update/Delete allowd -> Publish Interview -> PUBLISH -> Candidates can now access it 
-*/
-
-// Generating a cryptographically secure token that will be used to create a public interview link for candidates
-
 export const publishInterviewService = async (id: string, userId: string) => {
   // fetching interview first to check its current publish state
 
@@ -82,7 +98,10 @@ export const publishInterviewService = async (id: string, userId: string) => {
 
   const accessToken = crypto.randomBytes(32).toString("hex");
 
-  interview.status = InterviewStatus.PUBLISHED;
+  interview.status =
+    interview.scheduledAt && interview.scheduledAt > new Date()
+      ? InterviewStatus.SCHEDULED
+      : InterviewStatus.PUBLISHED;
   interview.accessToken = accessToken;
 
   // optional: setting an expiry date in the future if needed
@@ -107,10 +126,9 @@ export const skipInterviewQuestionService = async (
   accessToken: string,
   questionNumber: number,
 ) => {
-  // Find interview
   const interview = await Interview.findOne({
     accessToken,
-  });
+  }); // Find interview
 
   if (!interview) {
     return {
@@ -120,6 +138,7 @@ export const skipInterviewQuestionService = async (
   }
 
   // Interview must be running
+
   if (interview.status !== InterviewStatus.IN_PROGRESS) {
     return {
       success: false,
@@ -127,7 +146,18 @@ export const skipInterviewQuestionService = async (
     };
   }
 
+  if (isInterviewTimeExpired(interview)) {
+    await completeInterviewByTime(interview);
+
+    return {
+      success: false,
+      interviewCompleted: true,
+      message: "Interview time has expired.",
+    };
+  }
+
   // Find current question
+
   const question = await InterviewQuestion.findOne({
     interviewId: interview._id,
     questionNumber,
@@ -141,16 +171,13 @@ export const skipInterviewQuestionService = async (
   }
 
   // Prevent duplicate skip/submission
+
   if (question.answeredAt) {
     return {
       success: false,
       message: "Question has already been submitted",
     };
   }
-
-  // -----------------------------------------
-  // MARK QUESTION AS SKIPPED
-  // -----------------------------------------
 
   question.candidateAnswer = "";
   question.answerTranscript = "";
@@ -160,10 +187,6 @@ export const skipInterviewQuestionService = async (
   question.answeredAt = new Date();
 
   await question.save();
-
-  // -----------------------------------------
-  // FINAL QUESTION
-  // -----------------------------------------
 
   if (questionNumber >= interview.totalQuestions) {
     interview.status = InterviewStatus.COMPLETED;
@@ -175,15 +198,12 @@ export const skipInterviewQuestionService = async (
     });
 
     const totalScore = answeredQuestions.reduce(
-      (sum, currentQuestion) =>
-        sum + (currentQuestion.score ?? 0),
+      (sum, currentQuestion) => sum + (currentQuestion.score ?? 0),
       0,
     );
 
     interview.score =
-      answeredQuestions.length > 0
-        ? totalScore / answeredQuestions.length
-        : 0;
+      answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
 
     await interview.save();
 
@@ -193,29 +213,8 @@ export const skipInterviewQuestionService = async (
     };
   }
 
-  // -----------------------------------------
-  // GENERATE NEXT QUESTION
-  // -----------------------------------------
-
-  const generatedQuestion = await generateQuestion({
-    interview,
-    previousQuestion: question,
-    previousAnswer: "",
-  });
-
-  const nextQuestion = await InterviewQuestion.create({
-    interviewId: interview._id,
-    questionNumber: questionNumber + 1,
-    question: generatedQuestion.question,
-    type: generatedQuestion.type,
-    generatedBy: GeneratedBy.AI,
-  });
-
   return {
     success: true,
     interviewCompleted: false,
-    data: {
-      nextQuestion,
-    },
   };
 };

@@ -28,17 +28,22 @@ export interface IInterview extends Document {
   description?: string;
   role: string;
   skills: string[];
+
   duration: number;
-  totalQuestions: number ;
+  totalQuestions: number;
   difficulty: InterviewDifficulty;
+  
   type: InterviewType;
   status: InterviewStatus;
   createdBy: string;
   candidateId: string;
   score?: number;
   feedback?: string;
+
   startedAt?: Date;
+  scheduledAt?: Date;
   completedAt?: Date;
+
   experience: number;
 
   accessToken?: string;
@@ -69,12 +74,14 @@ const interviewSchema = new Schema<IInterview>(
     duration: {
       type: Number,
       required: true,
+      min: 10
     },
     totalQuestions: {
-      type: Number, 
-      required: true, 
-      default: 5, 
-      min: 1
+      type: Number,
+      required: true,
+      default: 5,
+      min: 1,
+      max: 5
     },
     difficulty: {
       type: String,
@@ -101,6 +108,12 @@ const interviewSchema = new Schema<IInterview>(
       type: String,
       required: true,
     },
+
+    scheduledAt: {
+      type: Date,
+      requiredAt: true 
+    },
+
     candidateId: String,
     score: Number,
     feedback: String,

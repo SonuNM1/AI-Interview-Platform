@@ -467,6 +467,9 @@ importers:
 
   apps/interview-service:
     dependencies:
+      '@repo/shared-rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/shared-rabbitmq
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -577,6 +580,9 @@ importers:
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      node-cron:
+        specifier: ^4.6.0
+        version: 4.6.0
       nodemailer:
         specifier: ^9.0.3
         version: 9.0.3
@@ -3320,6 +3326,10 @@ packages:
   node-addon-api@8.9.0:
     resolution: {integrity: sha512-ekZMeaaIzSQTSpr7X2X3iJM7lTzgnx8ahAG9pJfT/7+14mlEM8ZYQ9cgCDvSSRbReFK0oHli3WrZdCiRsgAT9Q==}
     engines: {node: ^18 || ^20 || >= 21}
+
+  node-cron@4.6.0:
+    resolution: {integrity: sha512-Si/bzYiKRHOB8/a99T2+SDGN582ONDMSTlJr5oCkT6GtnqPjZ2s10eoQRYkW9ZHwjVxONL+W8Fb+qR0AHMQsdg==}
+    engines: {node: '>=20'}
 
   node-domexception@1.0.0:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
@@ -6275,6 +6285,8 @@ snapshots:
   negotiator@1.0.0: {}
 
   node-addon-api@8.9.0: {}
+
+  node-cron@4.6.0: {}
 
   node-domexception@1.0.0: {}
 

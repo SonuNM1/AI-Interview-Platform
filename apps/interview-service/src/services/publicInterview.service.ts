@@ -32,10 +32,13 @@ export const getPublicInterviewService = async (
 
   // only published interviews are accessible to candidates
 
-  if (interview.status !== InterviewStatus.PUBLISHED) {
+  if (
+    interview.status !== InterviewStatus.PUBLISHED &&
+    interview.status !== InterviewStatus.SCHEDULED
+  ) {
     return {
       success: false,
-      message: "Interview has not been published yet",
+      message: "Interview is not available",
     };
   }
 
@@ -57,9 +60,7 @@ export const getPublicInterviewService = async (
 export const startInterviewService = async (accessToken: string) => {
   const interview = await Interview.findOne({
     accessToken,
-  }); // finding interview using access token
-
-  // Interview not found
+  });
 
   if (!interview) {
     return {
@@ -68,52 +69,46 @@ export const startInterviewService = async (accessToken: string) => {
     };
   }
 
-  // Interview must be published
+  // Only published/scheduled interviews can be started.
+  if (
+    interview.status !== InterviewStatus.PUBLISHED &&
+    interview.status !== InterviewStatus.SCHEDULED
+  ) {
+    if (interview.status === InterviewStatus.DRAFT) {
+      return {
+        success: false,
+        message: "Interview has not been published yet",
+      };
+    }
 
-  if (interview.status === InterviewStatus.DRAFT) {
+    if (interview.status === InterviewStatus.IN_PROGRESS) {
+      return {
+        success: false,
+        message: "Interview is already in progress",
+      };
+    }
+
+    if (interview.status === InterviewStatus.COMPLETED) {
+      return {
+        success: false,
+        message: "Interview has already been completed",
+      };
+    }
+
+    if (interview.status === InterviewStatus.CANCELLED) {
+      return {
+        success: false,
+        message: "Interview has been cancelled",
+      };
+    }
+
     return {
       success: false,
-      message: "Interview has not been published yet",
+      message: "Interview cannot be started",
     };
   }
 
-  // Scheduled interview cannot be started before time
-
-  if (interview.status === InterviewStatus.SCHEDULED) {
-    return {
-      success: false,
-      message: "Interview has not started yet",
-    };
-  }
-
-  // Already running
-
-  if (interview.status === InterviewStatus.IN_PROGRESS) {
-    return {
-      success: false,
-      message: "Interview is already in progress",
-    };
-  }
-
-  // Already completed
-
-  if (interview.status === InterviewStatus.COMPLETED) {
-    return {
-      success: false,
-      message: "Interview has already been completed",
-    };
-  }
-
-  // Cancelled
-
-  if (interview.status === InterviewStatus.CANCELLED) {
-    return {
-      success: false,
-      message: "Interview has been cancelled",
-    };
-  }
-
-  // Expired
+  // Check link expiry.
 
   if (interview.expiresAt && interview.expiresAt < new Date()) {
     return {
@@ -122,8 +117,27 @@ export const startInterviewService = async (accessToken: string) => {
     };
   }
 
-  // preventing starting twice or multiple starts
+  // Scheduled interview must have a scheduled time.
+  if (!interview.scheduledAt) {
+    return {
+      success: false,
+      message: "Interview schedule is missing",
+    };
+  }
 
+  const now = new Date();
+
+  // Candidate is too early.
+  
+  if (now < interview.scheduledAt) {
+    return {
+      success: false,
+      message: "Interview has not started yet",
+      scheduledAt: interview.scheduledAt,
+    };
+  }
+
+  // Prevent starting twice.
   if (interview.startedAt) {
     return {
       success: false,
@@ -131,14 +145,19 @@ export const startInterviewService = async (accessToken: string) => {
     };
   }
 
-  // marking interview as started
-
+  // Start interview.
   interview.status = InterviewStatus.IN_PROGRESS;
-  interview.startedAt = new Date();
+  interview.startedAt = now;
 
   await interview.save();
 
   return {
     success: true,
+    data: {
+      interviewId: interview._id,
+      startedAt: interview.startedAt,
+      duration: interview.duration,
+      totalQuestions: interview.totalQuestions,
+    },
   };
 };

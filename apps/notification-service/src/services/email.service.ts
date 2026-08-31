@@ -26,3 +26,52 @@ export const sendVerificationOTP = async (email: string, otp: string) => {
 
   console.log("✅ Email sent");
 };
+
+export const sendInterviewReminderEmail = async (
+  email: string,
+  interviewTitle: string,
+  scheduledAt: Date,
+  duration: number,
+) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Interview Reminder: ${interviewTitle}`,
+    html: `
+      <h2>Interview Reminder</h2>
+
+      <p>Your interview is scheduled soon.</p>
+
+      <p>
+        <strong>Interview:</strong> ${interviewTitle}
+      </p>
+
+      <p>
+        <strong>Scheduled at:</strong>
+        ${scheduledAt.toLocaleString()}
+      </p>
+
+      <p>
+        <strong>Duration:</strong>
+        ${duration} minutes
+      </p>
+
+      <p>
+        Please join a few minutes before your scheduled time.
+      </p>
+    `,
+  });
+
+  console.log(
+    `✅ Interview reminder sent to ${email}`,
+  );
+};
+

@@ -1,5 +1,36 @@
 import api from "./api";
 
+export interface PublicInterview {
+  title: string;
+  description?: string;
+  role: string;
+  skills: string[];
+  duration: number;
+  totalQuestions: number;
+  difficulty: "EASY" | "MEDIUM" | "HARD";
+  type: "TECHNICAL" | "HR" | "SYSTEM_DESIGN" | "DSA";
+  status:
+    | "DRAFT"
+    | "PUBLISHED"
+    | "SCHEDULED"
+    | "PAUSED"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "CANCELLED";
+  scheduledAt?: string;
+  startedAt?: string;
+}
+
+export async function getPublicInterview(
+  accessToken: string,
+): Promise<PublicInterview> {
+  const response = await api.get(
+    `/public/interviews/${accessToken}`,
+  );
+
+  return response.data.data;
+}
+
 // interview returned by the Interview service for the authenticated candidate
 
 export interface CandidateInterview {
@@ -53,7 +84,9 @@ export async function getCandidateInterviews(): Promise<CandidateInterview[]> {
 // starts the selected candidate interview using its secure public access token 
 
 export async function startInterview(accessToken: string): Promise<void> {
-    await api.post(`/public/interviews/${accessToken}/start`) ; 
+    const response = await api.post(`/public/interviews/${accessToken}/start`) ; 
+
+    return response.data ; 
 }
 
 // fetches the first AI-generated question for an interview thta is already in progress
@@ -62,6 +95,15 @@ export async function getFirstQuestion(accessToken: string) {
     const response = await api.post(`/public/interviews/${accessToken}/start-question`) ; 
 
     return response.data.data ;
+}
+
+// Fetches the next question after the current answer has been submitted.
+export async function getNextQuestion(accessToken: string) {
+  const response = await api.post(
+    `/public/interviews/${accessToken}/questions/next`,
+  );
+
+  return response.data;
 }
 
 // submit the candidate's spoken answer for the current question 
@@ -94,6 +136,16 @@ export async function submitCandidateAnswer(
   );
 
     return response.data ; // returning the backend response 
+}
+
+export async function submitInterview(
+  accessToken: string,
+) {
+  const response = await api.post(
+    `/public/interviews/${accessToken}/submit`,
+  );
+
+  return response.data;
 }
 
 // Tell the Interview Service that the candidate wants to skip the current question.

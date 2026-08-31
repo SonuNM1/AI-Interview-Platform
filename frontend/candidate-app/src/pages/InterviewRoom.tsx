@@ -6,6 +6,9 @@ import {
   getFirstQuestion,
   submitCandidateAnswer,
   skipCandidateQuestion,
+  getNextQuestion,
+  getPublicInterview,
+  submitInterview,
 } from "../services/interview.api";
 import interviewerImage from "../assets/interviewer.png";
 import { speakText, stopSpeaking } from "../services/textToSpeech";
@@ -17,6 +20,9 @@ import {
   createSilenceDetector,
   type SilenceDetector,
 } from "../services/silenceDetector";
+import { SkipQuestionModal } from "../components/interview/SkipQuestionModal";
+import { InterviewTimer } from "../components/interview/InterviewTimer";
+import { EndInterviewModal } from "../components/interview/EndInterviewModal";
 
 interface InterviewQuestion {
   _id: string;
@@ -38,50 +44,68 @@ interface InterviewQuestion {
 export function InterviewRoom() {
   const { accessToken } = useParams<{ accessToken: string }>();
 
-  const [isSpeaking, setIsSpeaking] = useState(false); // tracks whethe the AI interviewer is currently speaking
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSkipPrompt, setShowSkipPrompt] = useState(false);
+  const [isInterviewCompleted, setIsInterviewCompleted] = useState(false);
+  const [showEndInterviewModal, setShowEndInterviewModal] = useState(false);
 
-  const [isRecording, setIsRecording] = useState(false); // tracks whether the candidate is currently recording an answer
+  const isSkippingQuestion = useRef(false);
 
-  const [transcript, setTranscript] = useState(""); // stores the transcript returned by the Interview service after the candidate's audio has been processed
-
-  const [showSkipPrompt, setShowSkipPrompt] = useState(false); // shows the "dont know/skip" prompt when the candidate has not spoken for several seconds
-
-  const isSkippingQuestion = useRef(false); // prevents multiple skip requests
-
-  const recorderRef = useRef<AudioRecorder | null>(null); // keeps the audio recorder instance alive across renders
+  const recorderRef = useRef<AudioRecorder | null>(null);
 
   const silenceDetectorRef = useRef<SilenceDetector | null>(null);
-
-  // sores when candidate recording started. Used to calculate answer duration
-
   const recordingStartedAt = useRef<number | null>(null);
-
-  // prevents multiple silence events froom submitting the same answer more than once
 
   const isSubmittingAnswer = useRef(false);
 
   // fetches the first AI-generated interview question
 
-  const { data, isLoading, isError } = useQuery({
+  const {
+    data: interview,
+    isLoading: isInterviewLoading,
+    isError: isInterviewError,
+  } = useQuery({
+    queryKey: ["public-interview", accessToken],
+    queryFn: () => {
+      if (!accessToken) {
+        throw new Error("Interview access token is missing.");
+      }
+
+      return getPublicInterview(accessToken);
+    },
+    enabled: !!accessToken,
+  });
+
+  // fetch the first interview question
+
+  const {
+    data: firstQuestion,
+    isLoading: isQuestionLoading,
+    isError: isQuestionError,
+  } = useQuery({
     queryKey: ["interview-first-question", accessToken],
     queryFn: () => {
       if (!accessToken) {
         throw new Error("Interview access token is missing.");
       }
+
       return getFirstQuestion(accessToken);
     },
-    enabled: !!accessToken,
+    enabled: !!accessToken && interview?.status === "IN_PROGRESS",
   });
 
   const [nextQuestion, setNextQuestion] = useState<InterviewQuestion | null>(
     null,
   );
 
-  const currentQuestion = nextQuestion ?? data ?? null;
+  const currentQuestion = nextQuestion ?? firstQuestion ?? null;
 
   const questionNumber = currentQuestion?.questionNumber;
 
-  // handles the moment when the silence detector determines that the candidate has finished answering
+  // Handles the moment when the silence detector determines that the candidate has finished answering.
 
   const handleCandidateSilence = useCallback(async (): Promise<void> => {
     if (
@@ -94,13 +118,16 @@ export function InterviewRoom() {
     }
 
     isSubmittingAnswer.current = true;
+    setIsSubmitting(true);
 
     const submittedQuestionNumber = questionNumber;
 
     try {
+      // Stop silence detection.
       silenceDetectorRef.current?.stop();
       silenceDetectorRef.current = null;
 
+      // Stop recording and get complete audio.
       const audioBlob = await recorderRef.current.stop();
 
       setIsRecording(false);
@@ -112,6 +139,10 @@ export function InterviewRoom() {
       recordingStartedAt.current = null;
       recorderRef.current = null;
 
+      // Clear any previous transcript before showing the new one.
+      setTranscript("");
+
+      // Send answer to backend.
       const result = await submitCandidateAnswer(
         accessToken,
         submittedQuestionNumber,
@@ -119,39 +150,46 @@ export function InterviewRoom() {
         duration,
       );
 
-      setTranscript(result?.data?.transcript ?? ""); // Show transcript returned by backend.
+      const finalTranscript = result?.data?.transcript ?? "";
 
-      // Interview finished.
+      setTranscript(finalTranscript);
 
       if (result?.interviewCompleted) {
-        console.log("Interview completed");
+        setIsInterviewCompleted(true);
         return;
       }
 
-      // Move to the next question.
+      await new Promise((resolve) => setTimeout(resolve, 1800));
 
-      if (result?.data?.nextQuestion) {
-        setNextQuestion(result.data.nextQuestion);
-        setTranscript("");
+      const nextResult = await getNextQuestion(accessToken);
+
+      if (nextResult?.interviewCompleted) {
+        console.log("Interview completed.");
+        return;
       }
 
-      console.log("Candidate answer submitted successfully");
+      if (nextResult?.data) {
+        // Clear old answer only when new question is ready.
+        setTranscript("");
+
+        setNextQuestion(nextResult.data);
+      }
+
+      console.log("Candidate answer submitted successfully.");
     } catch (error) {
       console.error("Failed to submit candidate answer:", error);
 
       setIsRecording(false);
     } finally {
       isSubmittingAnswer.current = false;
+      setIsSubmitting(false);
     }
-  }, [accessToken, currentQuestion]);
+  }, [accessToken, questionNumber]);
 
-  // candidate has not spoken for the initial waiting period. Do not submit an empty answer
-
-  const handleInitialSilence = useCallback(() => {
-    setShowSkipPrompt(true);
-  }, []);
+  // Skips the current question and asks the Interview Service to generate the next one.
 
   const handleSkipQuestion = useCallback(async (): Promise<void> => {
+    // Prevent duplicate skip requests.
     if (isSkippingQuestion.current || !accessToken || !questionNumber) {
       return;
     }
@@ -159,11 +197,11 @@ export function InterviewRoom() {
     isSkippingQuestion.current = true;
 
     try {
-      // Stop microphone detection.
+      // Stop the silence detector before skipping the question.
       silenceDetectorRef.current?.stop();
       silenceDetectorRef.current = null;
 
-      // Stop and destroy current recorder.
+      // Stop and destroy the current recorder.
       recorderRef.current?.destroy();
       recorderRef.current = null;
 
@@ -173,35 +211,49 @@ export function InterviewRoom() {
       setShowSkipPrompt(false);
       setTranscript("");
 
-      // Tell backend to mark this question as skipped.
+      // Tell the Interview Service to skip the current question.
       const result = await skipCandidateQuestion(accessToken, questionNumber);
+
+      // The final question can be skipped and complete the interview.
 
       if (result?.interviewCompleted) {
         console.log("Interview completed after skipping final question.");
-
         return;
       }
 
-      // Backend generates the next question.
-      if (result?.data?.nextQuestion) {
-        setNextQuestion(result.data.nextQuestion);
-      }
+      if (result?.interviewCompleted) {
+  setIsInterviewCompleted(true);
+  return;
+}
+
+if (result?.data?.nextQuestion) {
+  setNextQuestion(result.data.nextQuestion);
+}
     } catch (error) {
       console.error("Failed to skip interview question:", error);
     } finally {
       isSkippingQuestion.current = false;
     }
-  }, [accessToken, currentQuestion]);
+  }, [accessToken, questionNumber]);
 
-  // automatically starts microphone recording after the AI interviewer finishes speaking
+  const handleInitialSilence = useCallback(() => {
+    setShowSkipPrompt(true);
+  }, []);
+
+  // Automatically starts microphone recording after the AI interviewer finishes speaking.
 
   const startCandidateRecording = useCallback(async (): Promise<void> => {
-    if (!questionNumber) return;
+    if (!questionNumber || isSubmittingAnswer.current) {
+      return;
+    }
 
-    if (recorderRef.current) return;
+    if (recorderRef.current) {
+      return;
+    }
 
     try {
       setShowSkipPrompt(false);
+      setTranscript("");
 
       const recorder = createAudioRecorder();
 
@@ -233,32 +285,44 @@ export function InterviewRoom() {
 
       setIsRecording(false);
 
+      silenceDetectorRef.current?.stop();
+      silenceDetectorRef.current = null;
+
       recorderRef.current?.destroy();
       recorderRef.current = null;
+
+      recordingStartedAt.current = null;
     }
-  }, [handleCandidateSilence, handleInitialSilence, currentQuestion]);
+  }, [handleCandidateSilence, handleInitialSilence, questionNumber]);
 
-  // start speaking whenever a new interview question is available
-
-  useEffect(() => {
-    if (!currentQuestion?.question) {
+  const handleInterviewTimeExpired = useCallback(async () => {
+    if (!accessToken) {
       return;
     }
 
-    speakText(
-      currentQuestion.question,
+    try {
+      recorderRef.current?.destroy();
+      recorderRef.current = null;
 
-      () => {
-        setIsSpeaking(true);
-      },
+      silenceDetectorRef.current?.stop();
+      silenceDetectorRef.current = null;
 
-      () => {
-        setIsSpeaking(false);
-        void startCandidateRecording();
-      },
-    );
+      setIsRecording(false);
 
-    return () => {
+      await submitInterview(accessToken);
+
+      setIsInterviewCompleted(true);
+    } catch (error) {
+      console.error("Failed to submit interview after time expired:", error);
+    }
+  }, [accessToken]);
+
+  const handleEndInterview = useCallback(async () => {
+    if (!accessToken) {
+      return;
+    }
+
+    try {
       stopSpeaking();
 
       silenceDetectorRef.current?.stop();
@@ -269,10 +333,98 @@ export function InterviewRoom() {
 
       recordingStartedAt.current = null;
 
-      setIsSpeaking(false);
       setIsRecording(false);
+
+      await submitInterview(accessToken);
+
+      setShowEndInterviewModal(false);
+      setIsInterviewCompleted(true);
+    } catch (error) {
+      console.error("Failed to end interview:", error);
+    }
+  }, [accessToken]);
+
+  // Speaks every newly displayed interview question and starts candidate recording afterwards
+
+  useEffect(() => {
+    if (!currentQuestion?.question) {
+      return;
+    }
+
+    speakText(
+      currentQuestion.question,
+
+      // AI speech started.
+      () => {
+        setIsSpeaking(true);
+      },
+
+      // AI speech finished.
+      () => {
+        setIsSpeaking(false);
+        void startCandidateRecording();
+      },
+    );
+
+    // Clean up speech and microphone resources when the question changes
+    // or when the interview room is unmounted.
+    return () => {
+      stopSpeaking();
+
+      silenceDetectorRef.current?.stop();
+      silenceDetectorRef.current = null;
+
+      recorderRef.current?.destroy();
+      recorderRef.current = null;
+
+      recordingStartedAt.current = null;
     };
-  }, [currentQuestion, startCandidateRecording]);
+  }, [currentQuestion?.question, startCandidateRecording]);
+
+  if (isInterviewLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#0E1117] text-[#F2F4F7]">
+        <p className="text-sm text-[#8B95A5]">Loading interview...</p>
+      </div>
+    );
+  }
+
+  if (isInterviewError || !interview) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#0E1117] px-4 text-[#F2F4F7]">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold">Unable to load interview</h1>
+
+          <p className="mt-2 text-sm text-[#8B95A5]">
+            The interview could not be loaded. Please try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isInterviewCompleted) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#0E1117] px-4 text-[#F2F4F7]">
+        <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#151A23] p-8 text-center shadow-2xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+            <span className="text-3xl text-emerald-400">✓</span>
+          </div>
+
+          <h1 className="mt-6 text-2xl font-semibold">Interview Completed</h1>
+
+          <p className="mt-3 text-sm leading-relaxed text-[#8B95A5]">
+            Thank you for completing the interview. Your responses have been
+            submitted successfully.
+          </p>
+
+          <p className="mt-6 text-xs text-[#6F7887]">
+            You may now safely close this window.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0E1117] text-[#F2F4F7]">
@@ -291,12 +443,19 @@ export function InterviewRoom() {
         {/* Interview timer - actual timer will be connected later */}
         <div className="hidden items-center gap-2 text-sm text-[#AAB2BF] sm:flex">
           <FiClock className="h-4 w-4" />
-          00:00
+          {interview?.startedAt && (
+            <InterviewTimer
+              startedAt={interview.startedAt}
+              duration={interview.duration}
+              onTimeExpired={handleInterviewTimeExpired}
+            />
+          )}
         </div>
 
         <button
           type="button"
           className="flex cursor-pointer items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
+          onClick={() => setShowEndInterviewModal(true)}
         >
           <FiPhoneOff className="h-4 w-4" />
           End Interview
@@ -338,7 +497,7 @@ export function InterviewRoom() {
               <p className="text-xs text-[#8B95A5]">
                 {isSpeaking
                   ? "Speaking..."
-                  : isLoading
+                  : isQuestionLoading
                     ? "Preparing your interview..."
                     : "Ready to interview"}
               </p>
@@ -353,19 +512,22 @@ export function InterviewRoom() {
 
           <div className="shrink-0 rounded-2xl border border-white/10 bg-[#151A23] p-3 lg:p-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-[#8B95A5]">
-                Current Question
-              </p>
+              <div>
+                <p className="text-sm font-medium text-[#8B95A5]">
+                  Current Question
+                </p>
 
-              <p className="text-base leading-snug font-medium text-[#F2F4F7] lg:text-lg">
-                {isLoading ? "Preparing your first question..." : isError ? "Unable to load the interview question" : currentQuestion?.question ?? "No question received from the server."}
+                <p className="mt-1 text-xs text-[#6F7887]">
+                  Question {currentQuestion?.questionNumber ?? 1}
+                </p>
+              </div>
             </div>
 
             <div className="mt-3 rounded-xl border border-blue-500/20 bg-[#10151E] p-3.5 lg:p-4">
               <p className="text-base leading-snug font-medium text-[#F2F4F7] lg:text-lg">
-                {isLoading
+                {isQuestionLoading
                   ? "Preparing your first question..."
-                  : isError
+                  : isQuestionError
                     ? "Unable to load the interview question."
                     : (currentQuestion?.question ??
                       "No question received from the server.")}
@@ -399,7 +561,7 @@ export function InterviewRoom() {
               {/* current AI state */}
 
               <span>
-                {isLoading
+                {isQuestionLoading
                   ? "Preparing your interview..."
                   : isSpeaking
                     ? "AI Interviewer is speaking..."
@@ -436,7 +598,7 @@ export function InterviewRoom() {
 
               <div className="mt-3 w-full rounded-xl border border-white/10 bg-[#10151E] p-3">
                 <p className="text-xs font-medium text-[#6F7887]">
-                  LIVE TRANSCRIPTION
+                  {isSubmitting ? "PROCESSING ANSWER" : "TRANSCRIPTION"}
                 </p>
 
                 <p className="mt-2 max-h-16 overflow-y-auto text-sm leading-relaxed text-[#AAB2BF]">
@@ -450,6 +612,31 @@ export function InterviewRoom() {
           </div>
         </section>
       </main>
+
+      {/* show the skip prompt when the candidate remains silent initially */}
+
+      {showSkipPrompt && (
+        <SkipQuestionModal
+          onContinue={() => {
+            setShowSkipPrompt(false);
+            silenceDetectorRef.current?.resume();
+          }}
+          onSkip={() => {
+            void handleSkipQuestion();
+          }}
+        />
+      )}
+
+      {/* modal */}
+
+      <EndInterviewModal
+        isOpen={showEndInterviewModal}
+        isSubmitting={isSubmitting}
+        onCancel={() => setShowEndInterviewModal(false)}
+        onConfirm={() => {
+          void handleEndInterview();
+        }}
+      />
     </div>
   );
 }

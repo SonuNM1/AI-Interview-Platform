@@ -3,3 +3,7 @@ export enum UserEventType {
   RESEND_OTP = "RESEND_OTP",
   PASSWORD_RESET = "PASSWORD_RESET",
 }
+
+export enum InterviewEventType {
+  INTERVIEW_SCHEDULED = "INTERVIEW_SCHEDULED",
+}

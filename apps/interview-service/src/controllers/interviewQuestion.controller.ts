@@ -95,6 +95,8 @@ export const submitCandidateAnswer = async (req: Request, res: Response) => {
       audioFile.mimetype,
     );
 
+    console.log("🎙️ TRANSCRIPT:", answerTranscript);
+
     const result = await submitCandidateAnswerService(
       accessToken,
       questionNumber,
@@ -143,7 +145,7 @@ export const getNextQuestion = async (req: Request, res: Response) => {
       message: "Internal Server Error",
     });
   }
-};
+}
 
 /* Handles the candidate request to finish the interview. Ensures all questions are answered before completing the interview.*/
 

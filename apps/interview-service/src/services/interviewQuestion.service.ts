@@ -7,10 +7,12 @@ import {
   evaluateCandidateAnswer,
   generateQuestion,
 } from "../helpers/questionGenerator.helper.js";
+import {
+  isInterviewTimeExpired,
+  completeInterviewByTime,
+} from "../helpers/interviewTime.helper.js";
 
 export const getFirstQuestionService = async (accessToken: string) => {
-  // finding interview
-
   const interview = await Interview.findOne({
     accessToken,
   });
@@ -22,8 +24,6 @@ export const getFirstQuestionService = async (accessToken: string) => {
     };
   }
 
-  // Interview must be started
-
   if (interview.status !== InterviewStatus.IN_PROGRESS) {
     return {
       success: false,
@@ -31,27 +31,42 @@ export const getFirstQuestionService = async (accessToken: string) => {
     };
   }
 
-  // Check whether question 1 already exists
+  // If there is an unanswered question, return the earliest one.
+  // This allows the candidate to recover correctly after a refresh.
+  const unansweredQuestion = await InterviewQuestion.findOne({
+    interviewId: interview._id,
+    answeredAt: { $exists: false },
+  }).sort({
+    questionNumber: 1,
+  });
 
-  const existingQuestion = await InterviewQuestion.findOne({
+  if (unansweredQuestion) {
+    return {
+      success: true,
+      data: unansweredQuestion,
+    };
+  }
+
+  // If Q1 already exists and there are no unanswered questions,
+  // do NOT generate another Q1.
+  const firstQuestion = await InterviewQuestion.findOne({
     interviewId: interview._id,
     questionNumber: 1,
   });
 
-  if (existingQuestion) {
+  if (firstQuestion) {
     return {
-      success: true,
-      data: existingQuestion,
+      success: false,
+      message: "No unanswered question remains",
     };
   }
 
-  // first question - later this will come from AI LLM Model
-
+  // Only generate Q1 when no question exists yet.
   const generatedQuestion = await generateQuestion({
     interview,
   });
 
-  const firstQuestion = await InterviewQuestion.create({
+  const createdQuestion = await InterviewQuestion.create({
     interviewId: interview._id,
     questionNumber: 1,
     question: generatedQuestion.question,
@@ -61,7 +76,7 @@ export const getFirstQuestionService = async (accessToken: string) => {
 
   return {
     success: true,
-    data: firstQuestion,
+    data: createdQuestion,
   };
 };
 
@@ -92,7 +107,44 @@ export const submitCandidateAnswerService = async (
     };
   }
 
-  // Find Question
+  if (isInterviewTimeExpired(interview)) {
+  await completeInterviewByTime(interview);
+
+  return {
+    success: false,
+    interviewCompleted: true,
+    message: "Interview time has expired.",
+  };
+}
+
+  if (interview.expiresAt && new Date() >= interview.expiresAt) {
+    interview.status = InterviewStatus.COMPLETED;
+    interview.completedAt = new Date();
+
+    const answeredQuestions = await InterviewQuestion.find({
+      interviewId: interview._id,
+      answeredAt: { $exists: true },
+      score: { $ne: null },
+    });
+
+    const totalScore = answeredQuestions.reduce(
+      (sum, question) => sum + (question.score ?? 0),
+      0,
+    );
+
+    interview.score =
+      answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
+
+    await interview.save();
+
+    return {
+      success: false,
+      interviewCompleted: true,
+      message: "Interview time has expired.",
+    };
+  }
+
+  // Find current question
 
   const question = await InterviewQuestion.findOne({
     interviewId: interview._id,
@@ -107,53 +159,53 @@ export const submitCandidateAnswerService = async (
   }
 
   // Prevent duplicate submission
-
   if (question.answeredAt) {
     return {
-      success: false,
-      message: "Answer has already been submitted",
+      success: true,
+      alreadySubmitted: true,
+      data: {
+        transcript: question.answerTranscript ?? "",
+        score: question.score ?? 0,
+        feedback: question.feedback ?? "",
+      },
     };
   }
 
+  // Save candidate answer
   question.candidateAnswer = candidateAnswer;
   question.answerTranscript = answerTranscript;
   question.duration = duration;
   question.answeredAt = new Date();
 
-  // evaluating the submitted answer using AI
-
+  // Evaluate answer using AI
   const evaluation = await evaluateCandidateAnswer({
     question: question.question,
     candidateAnswer,
   });
 
-  // saving AI evaluation
-
+  // Save evaluation
   question.score = evaluation.score;
   question.feedback = evaluation.feedback;
 
-  // saving the updated question
-
   await question.save();
 
-  // if this was the final question, complete the interview
-
+  // Final question
   if (questionNumber >= interview.totalQuestions) {
     interview.status = InterviewStatus.COMPLETED;
     interview.completedAt = new Date();
 
-    // calculate final interview score 
-
     const answeredQuestions = await InterviewQuestion.find({
-      interviewId: interview._id, 
-      score: {$ne: null}
-    })
+      interviewId: interview._id,
+      score: { $ne: null },
+    });
 
     const totalScore = answeredQuestions.reduce(
-      (sum, currentQuestion) => sum + (currentQuestion.score ?? 0), 0
-    ) ; 
+      (sum, currentQuestion) => sum + (currentQuestion.score ?? 0),
+      0,
+    );
 
-    interview.score = answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0 ; 
+    interview.score =
+      answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
 
     await interview.save();
 
@@ -168,57 +220,38 @@ export const submitCandidateAnswerService = async (
     };
   }
 
-  // generate the next question after successfully saving the current canddiate answer
-
-  const generatedQuestion = await generateQuestion({
-    interview,
-    previousQuestion: question,
-    previousAnswer: answerTranscript,
-  });
-
-  // Create the next question in MongoDB.
-
-  const nextQuestion = await InterviewQuestion.create({
-    interviewId: interview._id,
-    questionNumber: questionNumber + 1,
-    question: generatedQuestion.question,
-    type: generatedQuestion.type,
-    generatedBy: GeneratedBy.AI,
-  });
-
-  // updating the interview's overall score
-
+  // Update current interview score
   const answeredQuestions = await InterviewQuestion.find({
     interviewId: interview._id,
-    score: {
-      $ne: null,
-    },
+    score: { $ne: null },
   });
 
   const totalScore = answeredQuestions.reduce(
-    (sum, question) => sum + (question.score ?? 0),
+    (sum, currentQuestion) => sum + (currentQuestion.score ?? 0),
     0,
   );
 
-  interview.score = totalScore / answeredQuestions.length;
+  interview.score =
+    answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
 
   await interview.save();
 
+  // IMPORTANT:
+  // We do NOT generate the next question here.
+  // The frontend will call getNextQuestionService().
   return {
     success: true,
-    interviewCompleted: false, 
+    interviewCompleted: false,
     data: {
       transcript: answerTranscript,
       score: evaluation.score,
       feedback: evaluation.feedback,
-      nextQuestion 
     },
   };
 };
 
 export const getNextQuestionService = async (accessToken: string) => {
-  // Find Interview
-
+  // Find interview
   const interview = await Interview.findOne({
     accessToken,
   });
@@ -237,49 +270,39 @@ export const getNextQuestionService = async (accessToken: string) => {
     };
   }
 
-  // Get last answered question
+  if (isInterviewTimeExpired(interview)) {
+  await completeInterviewByTime(interview);
 
-  const lastQuestion = await InterviewQuestion.findOne({
+  return {
+    success: true,
+    interviewCompleted: true,
+  };
+}
+
+  // Find the most recently answered question.
+  //
+  // IMPORTANT:
+  // We intentionally look only at answered questions.
+  // This prevents an already-created but unanswered Q2
+  // from being treated as the "last question".
+  const lastAnsweredQuestion = await InterviewQuestion.findOne({
     interviewId: interview._id,
+    answeredAt: { $exists: true },
   }).sort({
     questionNumber: -1,
   });
 
-  if (!lastQuestion) {
+  if (!lastAnsweredQuestion) {
     return {
       success: false,
-      message: "No previous question found",
+      message: "No answered question found",
     };
   }
 
-  if (!lastQuestion.answeredAt) {
-    return {
-      success: false,
-      message: "Please answer the current question first",
-    };
-  }
-
-  // Check whether next question already exists
-
-  const existingQuestion = await InterviewQuestion.findOne({
-    interviewId: interview._id,
-    questionNumber: lastQuestion.questionNumber + 1,
-  });
-
-  if (existingQuestion) {
-    return {
-      success: true,
-      data: existingQuestion,
-    };
-  }
-
-  const totalQuestions = await InterviewQuestion.countDocuments({
-    interviewId: interview._id,
-  });
-
-  if (totalQuestions >= interview.totalQuestions) {
+  // If the last answered question is the final question,
+  // the interview is complete.
+  if (lastAnsweredQuestion.questionNumber >= interview.totalQuestions) {
     interview.status = InterviewStatus.COMPLETED;
-
     interview.completedAt = new Date();
 
     await interview.save();
@@ -290,16 +313,32 @@ export const getNextQuestionService = async (accessToken: string) => {
     };
   }
 
-  const nextQuestionNumber = lastQuestion.questionNumber + 1;
+  const nextQuestionNumber = lastAnsweredQuestion.questionNumber + 1;
 
-  // interview -> Previous question -> Candidate answer -> Job role -> experience -> skills -> Gemini/OpenAI LLM -> Generated Question
-
-  const generatedQuestion = await generateQuestion({
-    interview,
-    previousQuestion: lastQuestion,
-    previousAnswer: lastQuestion.candidateAnswer ?? "",
+  // Check whether the next question was already generated.
+  //
+  // This is important for refreshes/retries.
+  const existingNextQuestion = await InterviewQuestion.findOne({
+    interviewId: interview._id,
+    questionNumber: nextQuestionNumber,
   });
 
+  if (existingNextQuestion) {
+    return {
+      success: true,
+      interviewCompleted: false,
+      data: existingNextQuestion,
+    };
+  }
+
+  // Generate the next question.
+  const generatedQuestion = await generateQuestion({
+    interview,
+    previousQuestion: lastAnsweredQuestion,
+    previousAnswer: lastAnsweredQuestion.candidateAnswer ?? "",
+  });
+
+  // Save the generated question.
   const nextQuestion = await InterviewQuestion.create({
     interviewId: interview._id,
     questionNumber: nextQuestionNumber,
@@ -308,10 +347,9 @@ export const getNextQuestionService = async (accessToken: string) => {
     generatedBy: GeneratedBy.AI,
   });
 
-  // checking whether the interview has reached its maximum number of questions
-
   return {
     success: true,
+    interviewCompleted: false,
     data: nextQuestion,
   };
 };
@@ -344,20 +382,19 @@ export const submitInterviewService = async (accessToken: string) => {
 
   // Check whether any question is left unanswered
 
-  const unansweredQuestion = await InterviewQuestion.findOne({
+  const answeredQuestions = await InterviewQuestion.find({
     interviewId: interview._id,
-    answeredAt: {
-      $exists: false,
-    },
+    answeredAt: { $exists: true },
+    score: { $ne: null },
   });
 
-  if (unansweredQuestion) {
-    return {
-      success: false,
-      message:
-        "Please answer all interview questions before finishing the interview.",
-    };
-  }
+  const totalScore = answeredQuestions.reduce(
+    (sum, question) => sum + (question.score ?? 0),
+    0,
+  );
+
+  interview.score =
+    answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
 
   // Mark interview as completed
 
@@ -369,5 +406,6 @@ export const submitInterviewService = async (accessToken: string) => {
 
   return {
     success: true,
+    score: interview.score ?? 0
   };
 };

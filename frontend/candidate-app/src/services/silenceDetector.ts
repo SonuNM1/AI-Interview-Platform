@@ -1,6 +1,7 @@
 export interface SilenceDetector {
   start: () => void;
   stop: () => void;
+  resume: () => void;
 }
 
 /*
@@ -22,26 +23,22 @@ export function createSilenceDetector(
 ): SilenceDetector {
   const audioContext = new AudioContext();
 
-  const source =
-    audioContext.createMediaStreamSource(stream);
+  const source = audioContext.createMediaStreamSource(stream);
 
-  const analyser =
-    audioContext.createAnalyser();
+  const analyser = audioContext.createAnalyser();
 
   analyser.fftSize = 512;
 
   source.connect(analyser);
 
-  const dataArray = new Uint8Array(
-    analyser.fftSize,
-  );
+  const dataArray = new Uint8Array(analyser.fftSize);
 
   // Candidate has to remain silent this long AFTER speaking.
   const SILENCE_DURATION = 2500;
 
   // Candidate has never spoken.
   // After this period we show the skip prompt.
-  const INITIAL_SILENCE_DURATION = 6000;
+  const INITIAL_SILENCE_DURATION = 4000;
 
   const SILENCE_THRESHOLD = 12;
 
@@ -70,48 +67,30 @@ export function createSilenceDetector(
       sum += Math.abs(value - 128);
     }
 
-    const averageVolume =
-      sum / dataArray.length;
+    const averageVolume = sum / dataArray.length;
 
-    const isSilent =
-      averageVolume < SILENCE_THRESHOLD;
+    const isSilent = averageVolume < SILENCE_THRESHOLD;
 
     if (isSilent) {
       if (silenceStartedAt === null) {
         silenceStartedAt = Date.now();
       }
 
-      const silentDuration =
-        Date.now() - silenceStartedAt;
+      const silentDuration = Date.now() - silenceStartedAt;
 
-      /*
-       * Candidate has not spoken anything yet.
-       *
-       * Do NOT submit an empty answer.
-       * Instead notify InterviewRoom so it can show
-       * the skip prompt.
-       */
       if (
         !hasSpoken &&
         !initialSilencePromptShown &&
         recordingStartedAt !== null &&
-        Date.now() - recordingStartedAt >=
-          INITIAL_SILENCE_DURATION
+        Date.now() - recordingStartedAt >= INITIAL_SILENCE_DURATION
       ) {
         initialSilencePromptShown = true;
-
+        started = false;
         onInitialSilence();
+        return;
       }
 
-      /*
-       * Candidate has already spoken.
-       *
-       * Normal pause detection.
-       */
-      if (
-        hasSpoken &&
-        silentDuration >= SILENCE_DURATION
-      ) {
+      if (hasSpoken && silentDuration >= SILENCE_DURATION) {
         started = false;
 
         onSilence();
@@ -130,11 +109,25 @@ export function createSilenceDetector(
       silenceStartedAt = null;
     }
 
-    animationFrameId =
-      requestAnimationFrame(checkVolume);
+    animationFrameId = requestAnimationFrame(checkVolume);
   };
 
   const start = (): void => {
+    if (started) {
+      return;
+    }
+
+    started = true;
+
+    silenceStartedAt = null;
+    recordingStartedAt = Date.now();
+    hasSpoken = false;
+    initialSilencePromptShown = false;
+
+    checkVolume();
+  };
+
+  const resume = (): void => {
     if (started) {
       return;
     }
@@ -163,5 +156,6 @@ export function createSilenceDetector(
   return {
     start,
     stop,
+    resume,
   };
 }
