@@ -1,13 +1,19 @@
 import prisma from "../utils/prisma.js";
+import {
+  indexCandidate,
+  removeCandidateFromIndex,
+  searchCandidates as searchCandidatesInElastic 
+} from "./elasticsearch.service.js";
 
 interface CreateUserInput {
   id: string;
   email: string;
+  role: "ADMIN" | "RECRUITER" | "CANDIDATE";
 }
 
 interface updateUserInput {
   id: string;
-  username?: string ;
+  username?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -38,12 +44,28 @@ export const createUserProfile = async (data: CreateUserInput) => {
     return existingUser;
   }
 
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       id: data.id,
       email: data.email,
+      role: data.role,
     },
   });
+
+  // only candidates are stored in the candidate search index
+
+  await indexCandidate({
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    location: user.location,
+    headline: user.headline,
+  });
+
+  return user;
 };
 
 export const updateUserProfile = async (data: updateUserInput) => {
@@ -54,7 +76,7 @@ export const updateUserProfile = async (data: updateUserInput) => {
     data: {
       firstName: data.firstName,
       lastName: data.lastName,
-      username: data.username, 
+      username: data.username,
       phone: data.phone,
       headline: data.headline,
       location: data.location,
@@ -63,6 +85,20 @@ export const updateUserProfile = async (data: updateUserInput) => {
       linkedin: data.linkedin,
     },
   });
+
+  // keep Elasticsearch synchronized with the latest candidate profile
+
+  await indexCandidate({
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    location: user.location,
+    headline: user.headline,
+  });
+
   return user;
 };
 
@@ -89,14 +125,19 @@ export const getUserProfile = async (data: GetUserInput) => {
 // delete user profile form user service database - development only
 
 export const deleteUserProfile = async (userId: string) => {
-  await prisma.user.update({
+
+  const user = await prisma.user.update({
     where: {
       id: userId,
     },
     data: {
       deletedAt: new Date(),
-    }
+    },
   });
+
+  if(user.role === "CANDIDATE") {
+    await removeCandidateFromIndex(userId) ; 
+  }
 
   return {
     deleted: true,
@@ -119,43 +160,39 @@ export const updateUserAvatar = async (data: updateUserAvatarInput) => {
   return user;
 };
 
-// Update the user's resume file id 
+// Update the user's resume file id
 
-export const updateUserResume = async (
+export const updateUserResume = async (data: {
+  userId: string;
+  resumeFileId: string;
+}) => {
+  return prisma.user.update({
+    where: {
+      id: data.userId,
+    },
     data: {
-        userId: string; 
-        resumeFileId: string; 
-    }
-) => {
-    return prisma.user.update({
-        where: {
-            id: data.userId, 
-        },
-        data: {
-            resumeFileId: data.resumeFileId
-        }
-    })
-}
+      resumeFileId: data.resumeFileId,
+    },
+  });
+};
 
-// return the user's current resume file id 
+// return the user's current resume file id
 
-export const getUserResumeFileId = async (
-    userId: string 
-) => {
-    const user = await prisma.user.findUnique({
-        where: {
-            id: userId, 
-        }, 
-        select: {
-            resumeFileId: true 
-        }
-    }) ; 
+export const getUserResumeFileId = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      resumeFileId: true,
+    },
+  });
 
-    if(!user) {
-        throw new Error("User not found") ; 
-    }
-    return user.resumeFileId ; 
-}
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return user.resumeFileId;
+};
 
 // returns the user's current avatar fie id
 
@@ -175,3 +212,9 @@ export const getUserAvatarFileId = async (userId: string) => {
 
   return user.avatarFileId;
 };
+
+// search candidates using ElasticSearch instead of PostgreSQL text filtering 
+
+export const searchCandidateProfiles = async (query: string) => {
+  return searchCandidatesInElastic(query) ; 
+}

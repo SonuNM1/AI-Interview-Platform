@@ -4,6 +4,7 @@ import {
   deleteUserController,
   getMyProfile,
   getUser,
+  searchCandidates,
   updateUser,
   uploadAvatarController,
   uploadResumeController,
@@ -25,6 +26,8 @@ router.patch(
   upload.single("file"),
   uploadResumeController,
 );
+
+router.get("/candidates/search", searchCandidates)
 
 router.get("/:id", getUser);
 

@@ -8,6 +8,7 @@ import {
   updateUserAvatar,
   updateUserProfile,
   updateUserResume,
+  searchCandidateProfiles
 } from "../services/user.service.js";
 import {
   deleteFileFromFileService,
@@ -20,9 +21,9 @@ interface MulterRequest extends Request {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { id, email } = req.body;
+    const { id, email, role } = req.body;
 
-    const user = await createUserProfile({ id, email });
+    const user = await createUserProfile({ id, email, role});
 
     return res.status(201).json({
       success: true,
@@ -311,6 +312,38 @@ export const uploadResumeController = async (
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+// search candidates - recruiter action 
+
+export const searchCandidates = async (req: Request, res: Response) => {
+  try {
+    const query = String(req.query.q ?? "").trim();
+
+    if (!query) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const candidates = await searchCandidateProfiles(query);
+
+    return res.status(200).json({
+      success: true,
+      data: candidates,
+    });
+  } catch (error) {
+    console.error("Search candidates error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Internal Server Error",
     });
   }
 };

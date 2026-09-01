@@ -1,9 +1,18 @@
+import "./index.css";
+import { Toaster } from "sonner";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+import { AppRoutes } from "./routes";
+import { queryClient } from "./queryClient";
+
 export default function App() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#151412] text-[#F2EDE4]">
-      <h1 className="text-3xl font-semibold">
-        Recruiter Dashboard
-      </h1>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <AppRoutes />
+
+      <ReactQueryDevtools initialIsOpen={false} />
+      <Toaster position="top-right" richColors closeButton />
+    </QueryClientProvider>
   );
 }

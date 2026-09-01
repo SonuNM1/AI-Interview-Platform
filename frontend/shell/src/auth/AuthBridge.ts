@@ -33,17 +33,6 @@ export function getAccessToken(): string | null {
   return localStorage.getItem("accessToken");
 }
 
-
-/**
- * ------------------------------------------------------------
- * Refresh access token
- * ------------------------------------------------------------
- *
- * The refresh token belongs to the Shell's authentication
- * system.
- *
- * MFEs simply ask the Shell to perform this operation.
- */
 export async function refreshAccessToken(): Promise<string> {
   const refreshToken = localStorage.getItem("refreshToken");
 

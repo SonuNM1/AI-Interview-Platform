@@ -13,6 +13,7 @@ const userProxy = createProxyMiddleware({
 });
 
 // Get logged-in user's own profile
+
 router.get(
   "/me",
   authenticate,
@@ -20,7 +21,17 @@ router.get(
   userProxy,
 );
 
+// Create profile
+
+router.post(
+  "/",
+  authenticate,
+  authorize("CANDIDATE", "RECRUITER", "MENTOR", "ADMIN"),
+  userProxy,
+);
+
 // Update avatar
+
 router.patch(
   "/me/avatar",
   authenticate,
@@ -29,6 +40,7 @@ router.patch(
 );
 
 // Update resume
+
 router.patch(
   "/me/resume",
   authenticate,
@@ -36,18 +48,21 @@ router.patch(
   userProxy,
 );
 
-// Public profile lookup
-router.get("/:id", userProxy);
+// search candidates - recruiter action 
 
-// Create profile
-router.post(
-  "/",
+router.get(
+  "/candidates/search",
   authenticate,
-  authorize("CANDIDATE", "RECRUITER", "MENTOR", "ADMIN"),
+  authorize("RECRUITER", "ADMIN"),
   userProxy,
 );
 
+// Public profile lookup
+
+router.get("/:id", userProxy);
+
 // Update profile
+
 router.patch(
   "/:id",
   authenticate,

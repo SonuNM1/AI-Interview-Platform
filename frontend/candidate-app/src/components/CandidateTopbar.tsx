@@ -1,8 +1,6 @@
-import {
-  Bell,
-  Menu,
-  User,
-} from "lucide-react";
+import { Bell, Menu, User } from "lucide-react";
+import { CandidateNotificationPopover } from "./CandidateNotificationPopover";
+import { useState } from "react";
 
 interface CandidateTopbarProps {
   onMenuClick: () => void;
@@ -13,6 +11,9 @@ export function CandidateTopbar({
   onMenuClick,
   onNavigate,
 }: CandidateTopbarProps) {
+  
+  const [showNotifications, setShowNotifications] = useState(false);
+
   return (
     <header
       className="
@@ -26,7 +27,6 @@ export function CandidateTopbar({
         sm:px-6
       "
     >
-
       <div className="flex items-center gap-3">
         {/* Mobile sidebar button */}
         <button
@@ -44,34 +44,51 @@ export function CandidateTopbar({
             lg:hidden
           "
         >
-          <Menu
-            className="h-5 w-5"
-            strokeWidth={1.8}
-          />
+          <Menu className="h-5 w-5" strokeWidth={1.8} />
         </button>
 
-        <button
-          type="button"
-          onClick={() => onNavigate("/candidate")}
-          className="
-            text-base
-            font-semibold
-            tracking-tight
-            text-[#F2EDE4]
-            lg:hidden
-          "
-        >
-          AI Interview
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowNotifications((previous) => !previous)}
+            aria-label="Notifications"
+            className="
+      relative
+      flex h-10 w-10
+      items-center justify-center
+      rounded-lg
+      text-[#8F887F]
+      transition-colors
+      hover:bg-[#24211E]
+      hover:text-[#F2EDE4]
+      cursor-pointer
+    "
+          >
+            <Bell className="h-[19px] w-[19px]" strokeWidth={1.8} />
+
+            <span
+              className="
+        absolute
+        right-[9px]
+        top-[8px]
+        h-1.5
+        w-1.5
+        rounded-full
+        bg-[#D98260]
+      "
+            />
+          </button>
+
+          {showNotifications && (
+            <CandidateNotificationPopover onNavigate={onNavigate} />
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-1">
-
         <button
           type="button"
-          onClick={() =>
-            onNavigate("/candidate/notifications")
-          }
+          onClick={() => onNavigate("/candidate/notifications")}
           aria-label="Notifications"
           className="
             relative
@@ -85,10 +102,7 @@ export function CandidateTopbar({
             cursor-pointer
           "
         >
-          <Bell
-            className="h-[19px] w-[19px]"
-            strokeWidth={1.8}
-          />
+          <Bell className="h-[19px] w-[19px]" strokeWidth={1.8} />
 
           <span
             className="
@@ -105,9 +119,7 @@ export function CandidateTopbar({
 
         <button
           type="button"
-          onClick={() =>
-            onNavigate("/candidate/profile")
-          }
+          onClick={() => onNavigate("/candidate/profile")}
           aria-label="Open profile"
           className="
             flex h-10 w-10
@@ -120,12 +132,8 @@ export function CandidateTopbar({
             cursor-pointer
           "
         >
-          <User
-            className="h-[20px] w-[20px]"
-            strokeWidth={1.8}
-          />
+          <User className="h-[20px] w-[20px]" strokeWidth={1.8} />
         </button>
-
       </div>
     </header>
   );

@@ -20,19 +20,6 @@ export interface PublicInterview {
   scheduledAt?: string;
   startedAt?: string;
 }
-
-export async function getPublicInterview(
-  accessToken: string,
-): Promise<PublicInterview> {
-  const response = await api.get(
-    `/public/interviews/${accessToken}`,
-  );
-
-  return response.data.data;
-}
-
-// interview returned by the Interview service for the authenticated candidate
-
 export interface CandidateInterview {
     _id: string ; 
 
@@ -61,16 +48,25 @@ export interface CandidateInterview {
     startedAt?: string | null ; 
     completedAt?: string | null ; 
 
+    scheduledAt?: string | null;
+
     createdAt: string ; 
     updatedAt: string ; 
 }
-
-// response returned by the candidate itnerviews API 
-
 export interface CandidateInterviewsResponse {
     success: boolean; 
     count: number ; 
     data: CandidateInterview[]
+}
+
+export async function getPublicInterview(
+  accessToken: string,
+): Promise<PublicInterview> {
+  const response = await api.get(
+    `/public/interviews/${accessToken}`,
+  );
+
+  return response.data.data;
 }
 
 // fetch all interviews assigned to the currently authenticated candidate 

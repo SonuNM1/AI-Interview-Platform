@@ -120,9 +120,16 @@ export function Interviews() {
 
               {/* Interview action */}
 
-              {/* Interview action */}
               <div className="mt-7 flex items-center justify-between border-t border-[#302A26] pt-5">
-                <p className="text-sm text-[#817A72]">Ready when you are.</p>
+                <p className="text-sm text-[#817A72]">
+                  {interview.status === "COMPLETED"
+                    ? "This interview has been completed."
+                    : interview.status === "IN_PROGRESS"
+                      ? "Your interview is currently in progress."
+                      : interview.status === "SCHEDULED"
+                        ? "Your interview is scheduled."
+                        : "Ready when you are."}
+                </p>
 
                 <button
                   type="button"
@@ -134,7 +141,9 @@ export function Interviews() {
                     ? "Resume Interview"
                     : interview.status === "COMPLETED"
                       ? "Completed"
-                      : "Start Interview"}
+                      : interview.status === "SCHEDULED"
+                        ? "View Interview"
+                        : "Start Interview"}
                 </button>
               </div>
             </div>

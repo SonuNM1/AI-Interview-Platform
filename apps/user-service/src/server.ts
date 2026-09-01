@@ -24,7 +24,8 @@ const startServer = async () => {
 
                 await createUserProfile({
                     id: data.id, 
-                    email: data.email
+                    email: data.email,
+                    role: data.role 
                 }) ; 
 
                 console.log("✅ Profile created") ; 
