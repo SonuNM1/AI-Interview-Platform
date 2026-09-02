@@ -13,7 +13,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@elastic/elasticsearch": "^9.5.0",
+    "@elastic/elasticsearch": "^8.19.2",
     "@prisma/client": "6.16.2",
     "@repo/shared-rabbitmq": "workspace:*",
     "axios": "^1.18.1",

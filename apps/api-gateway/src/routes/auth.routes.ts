@@ -16,6 +16,10 @@ const authProxy = createProxyMiddleware({
 
 router.post("/logout", authenticate, authProxy);
 
+router.post("/delete-account/request", authenticate, authProxy);
+
+router.post("/delete-account/verify", authenticate, authProxy);
+
 router.use("/", authProxy);
 
 export default router;

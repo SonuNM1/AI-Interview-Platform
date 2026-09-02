@@ -11,8 +11,19 @@ let channel: Channel;
 export const connectRabbitMQ = async () => {
     try {
         connection = await amqp.connect(
-            process.env.RABBITMQ_URL || "amqp://guest:guest@localhost:5672"
-        )
+            process.env.RABBITMQ_URL || "amqp://guest:guest@localhost:5672", 
+            {
+                heartbeat: 60
+            }
+        ) ; 
+
+        connection.on("error", (error) => {
+            console.error("❌ RabbitMQ connection error: ", error) ; 
+        })
+
+        connection.on("close", () => {
+            console.error("❌ RabbitMQ connection closed.")
+        })
 
         channel = await connection.createChannel() ; 
 

@@ -84,14 +84,20 @@ export function Interviews() {
                       ? "bg-blue-500/10 text-blue-300"
                       : interview.status === "COMPLETED"
                         ? "bg-white/5 text-[#8B95A5]"
-                        : "bg-[#25352D] text-[#9FD0B4]"
+                        : interview.status === "CANCELLED"
+                          ? "bg-red-500/10 text-red-400"
+                          : "bg-[#25352D] text-[#9FD0B4]"
                   }`}
                 >
                   {interview.status === "IN_PROGRESS"
                     ? "In Progress"
                     : interview.status === "COMPLETED"
                       ? "Completed"
-                      : "Ready"}
+                      : interview.status === "CANCELLED"
+                        ? "Cancelled"
+                        : interview.status === "SCHEDULED"
+                          ? "Scheduled"
+                          : "Ready"}
                 </span>
               </div>
 
@@ -104,6 +110,18 @@ export function Interviews() {
 
                 <span>{interview.totalQuestions} questions</span>
               </div>
+
+              {interview.scheduledAt && (
+                <div className="mt-3 text-sm text-[#A9A29A]">
+                  Scheduled for{" "}
+                  <span className="font-medium text-[#D98260]">
+                    {new Date(interview.scheduledAt).toLocaleString([], {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </span>
+                </div>
+              )}
 
               {/* Interview skills */}
 
@@ -128,22 +146,29 @@ export function Interviews() {
                       ? "Your interview is currently in progress."
                       : interview.status === "SCHEDULED"
                         ? "Your interview is scheduled."
-                        : "Ready when you are."}
+                        : interview.status === "CANCELLED"
+                          ? "This interview has been cancelled."
+                          : "Ready when you are."}
                 </p>
 
                 <button
                   type="button"
                   onClick={() => setSelectedInterview(interview)}
-                  disabled={interview.status === "COMPLETED"}
+                  disabled={
+                    interview.status === "COMPLETED" ||
+                    interview.status === "CANCELLED"
+                  }
                   className="cursor-pointer rounded-lg bg-[#B9674B] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#A85C42] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {interview.status === "IN_PROGRESS"
                     ? "Resume Interview"
                     : interview.status === "COMPLETED"
                       ? "Completed"
-                      : interview.status === "SCHEDULED"
-                        ? "View Interview"
-                        : "Start Interview"}
+                      : interview.status === "CANCELLED"
+                        ? "Cancelled"
+                        : interview.status === "SCHEDULED"
+                          ? "View Interview"
+                          : "Start Interview"}
                 </button>
               </div>
             </div>

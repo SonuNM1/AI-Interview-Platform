@@ -1,7 +1,12 @@
 import { FiClock, FiX } from "react-icons/fi";
-import {startInterview, type CandidateInterview } from "../services/interview.api";
+import { useEffect, useState } from "react";
+import {
+  startInterview,
+  type CandidateInterview,
+} from "../services/interview.api";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import axios from "axios";
 
 interface InterviewStartModalProps {
   interview: CandidateInterview;
@@ -10,49 +15,100 @@ interface InterviewStartModalProps {
 
 /* Displays interview details and asks the candidate for confirmation before starting. */
 
-
 export function InterviewStartModal({
   interview,
   onClose,
 }: InterviewStartModalProps) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const scheduledTime = interview.scheduledAt
+    ? new Date(interview.scheduledAt).getTime()
+    : null;
+
+  const timeLeft =
+    scheduledTime !== null ? Math.max(0, scheduledTime - now) : null;
+
+  const isBeforeScheduledTime = timeLeft !== null && timeLeft > 0;
+
+  const isPublished = Boolean(interview.accessToken);
+
+  const canStart =
+    isPublished &&
+    !isBeforeScheduledTime &&
+    interview.status !== "COMPLETED" &&
+    interview.status !== "CANCELLED";
+
+  const formatCountdown = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+      2,
+      "0",
+    )}:${String(seconds).padStart(2, "0")}`;
+  };
 
   // starts a new interview or resumes an interview that is already in progress
 
   const startInterviewMutation = useMutation({
     mutationFn: async () => {
+      // if the interview was already started earlier, don't call the start API again
 
-      // if the interview was already started earlier, don't call the start API again 
-
-      if(interview.status === "IN_PROGRESS") {
+      if (interview.status === "IN_PROGRESS") {
         return {
-          success: true, 
-          alreadyStarted: true 
-        }
+          success: true,
+          alreadyStarted: true,
+        };
       }
-      
-      return await startInterview(interview.accessToken) ; 
-    }, 
 
-    // navigate to the interview room after starting/resuming 
+      if (!interview.accessToken) {
+        throw new Error("Interview has not been published yet");
+      }
+
+      return await startInterview(interview.accessToken);
+    },
+
+    // navigate to the interview room after starting/resuming
 
     onSuccess: () => {
       window.dispatchEvent(
         new CustomEvent("shell:navigate", {
           detail: {
-            path: `/candidate/interview/${interview.accessToken}`
-          }
-        })
-      )
+            path: `/candidate/interview/${interview.accessToken}`,
+          },
+        }),
+      );
     },
 
-    // show a friendly error if the start request actually fails 
+    // show a friendly error if the start request actually fails
 
     onError: (error) => {
-      console.error("Failed to start interview: ", error) ; 
+      console.error("Failed to start interview:", error);
 
-      toast.error("Unable to start the interview. Please try again.")
-    }
-  })
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error.response?.data?.message ||
+            "Unable to start the interview. Please try again.",
+        );
+        return;
+      }
+
+      toast.error("Unable to start the interview. Please try again.");
+    },
+  });
 
   return (
     <div
@@ -74,9 +130,7 @@ export function InterviewStartModal({
               {interview.title}
             </h2>
 
-            <p className="mt-2 text-sm text-[#817A72]">
-              {interview.role}
-            </p>
+            <p className="mt-2 text-sm text-[#817A72]">{interview.role}</p>
           </div>
 
           <button
@@ -90,6 +144,7 @@ export function InterviewStartModal({
         </div>
 
         {/* Interview information */}
+
         <div className="mt-7 rounded-xl border border-[#332B27] bg-[#211E1B] p-4">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-[#B8AFA5]">
             <span className="flex items-center gap-2">
@@ -115,12 +170,50 @@ export function InterviewStartModal({
           </div>
         </div>
 
+        {interview.scheduledAt && (
+          <div className="mt-6 rounded-xl border border-[#332B27] bg-[#211E1B] p-5 text-center">
+            {!isPublished ? (
+              <>
+                <p className="text-sm font-medium text-[#D98260]">
+                  Waiting for recruiter
+                </p>
+
+                <p className="mt-2 text-sm text-[#817A72]">
+                  This interview has not been published yet.
+                </p>
+              </>
+            ) : isBeforeScheduledTime ? (
+              <>
+                <p className="text-sm text-[#9B9188]">Interview starts in</p>
+
+                <p className="mt-2 font-mono text-3xl font-semibold tracking-wider text-[#D98260]">
+                  {formatCountdown(timeLeft ?? 0)}
+                </p>
+
+                <p className="mt-2 text-xs text-[#817A72]">
+                  You can start the interview when the scheduled time arrives.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-[#9FD0B4]">
+                  Your interview is ready
+                </p>
+
+                <p className="mt-1 text-sm text-[#817A72]">
+                  The scheduled time has arrived.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Candidate guidance */}
 
         <div className="text-sm leading-6 text-[#9B9188]">
-          {
-            interview.status === "IN_PROGRESS" ? "You have already started this interview. You can continue from where you left off." : "Take a moment to get comfortable. Once you begin, your interview will start."
-          }
+          {interview.status === "IN_PROGRESS"
+            ? "You have already started this interview. You can continue from where you left off."
+            : ""}
         </div>
 
         {/* Modal actions */}
@@ -135,11 +228,19 @@ export function InterviewStartModal({
 
           <button
             type="button"
-            onClick={()=> startInterviewMutation.mutate()}
-            disabled={startInterviewMutation.isPending}
-            className="cursor-pointer rounded-lg bg-[#B9674B] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#A85C42] disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => startInterviewMutation.mutate()}
+            disabled={startInterviewMutation.isPending || !canStart}
+            className="cursor-pointer rounded-lg bg-[#B9674B] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#A85C42] disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {startInterviewMutation.isPending ? "Opening...": interview.status === "IN_PROGRESS" ? "Resume Interview": "Start Interview"}
+            {startInterviewMutation.isPending
+              ? "Opening..."
+              : interview.status === "IN_PROGRESS"
+                ? "Resume Interview"
+                : !isPublished
+                  ? "Not Published"
+                  : isBeforeScheduledTime
+                    ? "Not Started Yet"
+                    : "Start Interview"}
           </button>
         </div>
       </div>

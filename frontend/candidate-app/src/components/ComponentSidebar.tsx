@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from "react";
 import {
-  Bell,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -10,6 +9,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { Mic2 } from "lucide-react";
 
 interface CandidateSidebarProps {
   isOpen: boolean;
@@ -17,18 +17,9 @@ interface CandidateSidebarProps {
   onNavigate: (path: string) => void;
 }
 
-/**
- * Candidate application sidebar.
- *
- * The Candidate MFE does not own routing.
- * Navigation is delegated to the Shell through onNavigate().
- *
- * Supports:
- * - Desktop collapsed / expanded state
- * - Mobile drawer
- * - Mobile backdrop
- * - Responsive navigation
+/* Candidate application sidebar - The Candidate MFE does not own routing. Navigation is delegated to the Shell through onNavigate().
  */
+
 export function CandidateSidebar({
   isOpen,
   onClose,
@@ -63,10 +54,10 @@ export function CandidateSidebar({
       icon: MessageCircle,
     },
     {
-      label: "Notifications",
-      path: "/candidate/notifications",
-      icon: Bell,
-    },
+      label: "Mock Interview", 
+      path: "/candidate/mock-interview", 
+      icon: Mic2
+    }
   ];
 
   return (

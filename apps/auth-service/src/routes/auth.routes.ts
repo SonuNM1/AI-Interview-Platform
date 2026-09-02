@@ -1,11 +1,10 @@
 import { Router } from "express";
-import { forgotPassword, googleLogin, login, profile, refresh, register, resendOTP, resetPassword } from "../controllers/auth.controller.js";
+import { forgotPassword, googleLogin, login, profile, refresh, register, requestAccountDeletionController, resendOTP, resetPassword, verifyAccountDeletionController } from "../controllers/auth.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { logout } from "../controllers/auth.controller.js";
 import { verifyEmailController } from "../controllers/auth.controller.js";
 import { validateRequest } from "../middlewares/validate-request.js";
 import { verifyEmailSchema } from "../validators/verify-email.schema.js";
-import { deleteUserController } from "../controllers/auth.controller.js";
 
 const router: Router = Router()
 
@@ -21,11 +20,6 @@ router.post("/logout", logout)
 
 router.post("/verify-email", validateRequest(verifyEmailSchema),verifyEmailController);
 
-router.delete(
-    "/delete-user/:id",
-    deleteUserController
-);
-
 router.post("/resend-otp", resendOTP)
 
 // forgot password 
@@ -39,5 +33,9 @@ router.post("/reset-password", resetPassword)
 // google login 
 
 router.post("/google", googleLogin);
+
+router.post("/delete-account/request", authenticate, requestAccountDeletionController) ; 
+
+router.post("/delete-account/verify", authenticate, verifyAccountDeletionController)
 
 export default router; 

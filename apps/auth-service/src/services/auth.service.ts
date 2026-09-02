@@ -75,7 +75,7 @@ export const loginUser = async (data: LoginInput) => {
   });
 
   if (!user) {
-    throw new AppError("Invalid email or password", 401);
+    throw new AppError("Email is not registered. Please register first.", 404);
   }
 
   if (user.deletedAt) {
@@ -196,6 +196,11 @@ export const deleteUser = async (userId: string) => {
 
   await axios.delete(
     `${process.env.USER_SERVICE_URL}/api/v1/users/delete-user/${userId}`,
+    {
+      headers: {
+        "x-user-id": userId 
+      }
+    }
   );
 
   return {
@@ -492,4 +497,42 @@ export const resetPasswordService = async (data: ResetPasswordSchema) => {
   return {
     message: "Password reset successful",
   };
+};
+
+// requests an OTP before permanently disabling the user's account 
+
+export const requestAccountDeletion = async (
+  userId: string,
+  email: string 
+) => {
+  await publishEvent("user_events", {
+    type: UserEventType.ACCOUNT_DELETION_REQUESTED, 
+    id: userId, 
+    email 
+  }) ; 
+
+  return {
+    message: "Account deletion OTP sent successfully."
+  }
+}
+
+/* Verifies the account deletion OTP and soft-deletes the authentication account */
+
+export const verifyAccountDeletion = async (
+  userId: string,
+  otp: string,
+) => {
+  const otpData = await getOTP(userId);
+
+  if (!otpData) {
+    throw new AppError("OTP expired or not found", 400);
+  }
+
+  if (otpData.otp !== otp) {
+    throw new AppError("Invalid OTP", 400);
+  }
+
+  await deleteOTP(userId);
+
+  return await deleteUser(userId) ; 
 };

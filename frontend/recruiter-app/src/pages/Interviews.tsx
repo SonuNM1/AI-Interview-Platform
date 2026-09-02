@@ -1,18 +1,33 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Copy, Trash2, Send } from "lucide-react";
+import { Plus, Copy, Trash2, Send, Pencil } from "lucide-react";
 import { CreateInterviewModal } from "../components/CreateInterviewModal";
+import { DeleteInterviewModal } from "../components/DeleteInterviewModal";
+import { EditInterviewModal } from "../components/EditInterviewModal";
 import {
   createInterview,
   deleteInterview,
   getInterviews,
   publishInterview,
+  updateInterview,
   type CreateInterviewData,
+  type Interview,
+  type UpdateInterviewData,
 } from "../services/interview.api";
 
 export default function Interviews() {
   const [isCreating, setIsCreating] = useState(false);
+
+  const [editingInterview, setEditingInterview] = useState<Interview | null>(
+    null,
+  ); // controls the interview currently being edited
+
+  const [deletingInterview, setDeletingInterview] = useState<Interview | null>(
+    null,
+  ); // Controls the interview currently awaiting delete confirmation.
+
+  const [editForm, setEditForm] = useState<UpdateInterviewData>({}); // Stores the editable fields for the selected interview.
 
   const queryClient = useQueryClient();
 
@@ -72,6 +87,30 @@ export default function Interviews() {
     },
   });
 
+  // updates an existing interview and refreshes the recruiter interview list
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateInterviewData }) =>
+      updateInterview(id, data),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["recruiter-interviews"],
+      });
+
+      setEditingInterview(null);
+      setEditForm({});
+
+      toast.success("Interview updated successfully.");
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : "Failed to update interview.";
+
+      toast.error(message);
+    },
+  });
+
   const publishMutation = useMutation({
     mutationFn: publishInterview,
 
@@ -90,6 +129,8 @@ export default function Interviews() {
     },
   });
 
+  // Deletes an interview after the recruiter confirms the action
+
   const deleteMutation = useMutation({
     mutationFn: deleteInterview,
 
@@ -98,11 +139,13 @@ export default function Interviews() {
         queryKey: ["recruiter-interviews"],
       });
 
-      toast.success("Interview deleted");
+      setDeletingInterview(null);
+
+      toast.success("Interview deleted successfully.");
     },
 
     onError: () => {
-      toast.error("Failed to delete interview");
+      toast.error("Failed to delete interview.");
     },
   });
 
@@ -130,6 +173,61 @@ export default function Interviews() {
     createMutation.mutate({
       ...form,
       skills: form.skills,
+    });
+  };
+
+  // opens the edit modal with the selected interview's current configuration
+
+  const handleEdit = (interview: Interview) => {
+    setEditingInterview(interview);
+
+    setEditForm({
+      title: interview.title,
+      description: interview.description ?? "",
+      role: interview.role,
+      skills: interview.skills,
+      duration: interview.duration,
+      scheduledAt: interview.scheduledAt,
+      difficulty: interview.difficulty,
+      type: interview.type,
+    });
+  };
+
+  // Validates the edited interview and sends the update to the backend.
+
+  const handleUpdate = () => {
+    if (!editingInterview) {
+      return;
+    }
+
+    if (!editForm.title?.trim()) {
+      toast.error("Interview title is required.");
+      return;
+    }
+
+    if (!editForm.role?.trim()) {
+      toast.error("Role is required.");
+      return;
+    }
+
+    if (!editForm.duration || editForm.duration < 10) {
+      toast.error("Interview duration must be at least 10 minutes.");
+      return;
+    }
+
+    if(!editForm.scheduledAt) {
+      toast.error("Interview date and time are required") ; 
+      return ; 
+    }
+
+    if (!editForm.scheduledAt) {
+      toast.error("Interview date and time are required.");
+      return;
+    }
+
+    updateMutation.mutate({
+      id: editingInterview._id,
+      data: editForm,
     });
   };
 
@@ -260,14 +358,25 @@ export default function Interviews() {
                     </button>
                   )}
 
+                  {/* Edit interview */}
+
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm("Delete this interview?")) {
-                        deleteMutation.mutate(interview._id);
-                      }
-                    }}
-                    className="flex cursor-pointer items-center justify-center rounded-lg border border-red-500/30 p-2 text-red-400 transition hover:bg-red-500/10"
+                    onClick={() => handleEdit(interview)}
+                    className="flex cursor-pointer items-center justify-center rounded-lg border border-[#2F2B27] p-2 text-[#A9A29A] transition hover:bg-[#24211E] hover:text-[#F2EDE4]"
+                    aria-label="Edit interview"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+
+                  {/* Delete interview */}
+
+                  <button
+                    type="button"
+                    onClick={() => setDeletingInterview(interview)}
+                    disabled={deleteMutation.isPending}
+                    className="flex cursor-pointer items-center justify-center rounded-lg border border-red-500/30 p-2 text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Delete interview"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -275,6 +384,7 @@ export default function Interviews() {
               </div>
 
               {/* Interview Details */}
+
               <div className="mt-5 grid gap-4 border-t border-[#2F2B27] pt-5 sm:grid-cols-2">
                 <div>
                   <p className="text-xs text-[#6F6962]">Candidate</p>
@@ -298,6 +408,7 @@ export default function Interviews() {
       )}
 
       {/* Create Interview Modal */}
+
       {isCreating && (
         <CreateInterviewModal
           form={form}
@@ -305,6 +416,41 @@ export default function Interviews() {
           isPending={createMutation.isPending}
           onClose={() => setIsCreating(false)}
           onSubmit={handleCreate}
+        />
+      )}
+
+      {/* edit interview modal */}
+
+      {editingInterview && (
+        <EditInterviewModal
+          interview={editingInterview}
+          form={editForm}
+          setForm={setEditForm}
+          isPending={updateMutation.isPending}
+          onClose={() => {
+            if (!updateMutation.isPending) {
+              setEditingInterview(null);
+              setEditForm({});
+            }
+          }}
+          onSubmit={handleUpdate}
+        />
+      )}
+
+      {/* delete interview confirmation modal */}
+
+      {deletingInterview && (
+        <DeleteInterviewModal
+          interviewTitle={deletingInterview.title}
+          isPending={deleteMutation.isPending}
+          onClose={() => {
+            if (!deleteMutation.isPending) {
+              setDeletingInterview(null);
+            }
+          }}
+          onConfirm={() => {
+            deleteMutation.mutate(deletingInterview._id);
+          }}
         />
       )}
     </div>

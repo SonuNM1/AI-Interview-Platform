@@ -11,6 +11,7 @@ import {
   isInterviewTimeExpired,
   completeInterviewByTime,
 } from "../helpers/interviewTime.helper.js";
+import { publishEvent, InterviewEventType } from "@repo/shared-rabbitmq";
 
 export const getFirstQuestionService = async (accessToken: string) => {
   const interview = await Interview.findOne({
@@ -88,7 +89,6 @@ export const submitCandidateAnswerService = async (
   duration: number,
 ) => {
   // Find interview
-
   const interview = await Interview.findOne({
     accessToken,
   });
@@ -100,6 +100,7 @@ export const submitCandidateAnswerService = async (
     };
   }
 
+  // Interview must be running
   if (interview.status !== InterviewStatus.IN_PROGRESS) {
     return {
       success: false,
@@ -107,35 +108,9 @@ export const submitCandidateAnswerService = async (
     };
   }
 
+  // Complete the interview if its time has expired.
   if (isInterviewTimeExpired(interview)) {
-  await completeInterviewByTime(interview);
-
-  return {
-    success: false,
-    interviewCompleted: true,
-    message: "Interview time has expired.",
-  };
-}
-
-  if (interview.expiresAt && new Date() >= interview.expiresAt) {
-    interview.status = InterviewStatus.COMPLETED;
-    interview.completedAt = new Date();
-
-    const answeredQuestions = await InterviewQuestion.find({
-      interviewId: interview._id,
-      answeredAt: { $exists: true },
-      score: { $ne: null },
-    });
-
-    const totalScore = answeredQuestions.reduce(
-      (sum, question) => sum + (question.score ?? 0),
-      0,
-    );
-
-    interview.score =
-      answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
-
-    await interview.save();
+    await completeInterviewByTime(interview);
 
     return {
       success: false,
@@ -145,7 +120,6 @@ export const submitCandidateAnswerService = async (
   }
 
   // Find current question
-
   const question = await InterviewQuestion.findOne({
     interviewId: interview._id,
     questionNumber,
@@ -177,19 +151,20 @@ export const submitCandidateAnswerService = async (
   question.duration = duration;
   question.answeredAt = new Date();
 
-  // Evaluate answer using AI
+  // Evaluate answer using AI.
   const evaluation = await evaluateCandidateAnswer({
     question: question.question,
     candidateAnswer,
   });
 
-  // Save evaluation
+  // Save AI evaluation.
   question.score = evaluation.score;
   question.feedback = evaluation.feedback;
 
   await question.save();
 
-  // Final question
+  // Final question: complete the interview after the answer
+  // has been evaluated and saved.
   if (questionNumber >= interview.totalQuestions) {
     interview.status = InterviewStatus.COMPLETED;
     interview.completedAt = new Date();
@@ -205,9 +180,24 @@ export const submitCandidateAnswerService = async (
     );
 
     interview.score =
-      answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
+      answeredQuestions.length > 0
+        ? totalScore / answeredQuestions.length
+        : 0;
 
     await interview.save();
+
+    // Notify the recruiter after the final answer has been
+    // evaluated and the interview has been completed.
+    await publishEvent("interview_events", {
+      type: InterviewEventType.INTERVIEW_COMPLETED,
+      interviewId: interview._id.toString(),
+      recruiterId: interview.createdBy,
+      candidateId: interview.candidateId,
+      title: interview.title,
+      role: interview.role,
+      completedAt: interview.completedAt,
+      score: interview.score,
+    });
 
     return {
       success: true,
@@ -220,7 +210,7 @@ export const submitCandidateAnswerService = async (
     };
   }
 
-  // Update current interview score
+  // Update current interview score.
   const answeredQuestions = await InterviewQuestion.find({
     interviewId: interview._id,
     score: { $ne: null },
@@ -232,13 +222,13 @@ export const submitCandidateAnswerService = async (
   );
 
   interview.score =
-    answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
+    answeredQuestions.length > 0
+      ? totalScore / answeredQuestions.length
+      : 0;
 
   await interview.save();
 
-  // IMPORTANT:
-  // We do NOT generate the next question here.
-  // The frontend will call getNextQuestionService().
+  // The frontend generates the next question separately.
   return {
     success: true,
     interviewCompleted: false,
@@ -271,13 +261,13 @@ export const getNextQuestionService = async (accessToken: string) => {
   }
 
   if (isInterviewTimeExpired(interview)) {
-  await completeInterviewByTime(interview);
+    await completeInterviewByTime(interview);
 
-  return {
-    success: true,
-    interviewCompleted: true,
-  };
-}
+    return {
+      success: true,
+      interviewCompleted: true,
+    };
+  }
 
   // Find the most recently answered question.
   //
@@ -396,16 +386,26 @@ export const submitInterviewService = async (accessToken: string) => {
   interview.score =
     answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
 
-  // Mark interview as completed
-
   interview.status = InterviewStatus.COMPLETED;
-
   interview.completedAt = new Date();
 
   await interview.save();
 
+  // Notify the recruiter that the candidate has completed the interview.
+
+  await publishEvent("interview_events", {
+    type: InterviewEventType.INTERVIEW_COMPLETED,
+    interviewId: interview._id.toString(),
+    recruiterId: interview.createdBy,
+    candidateId: interview.candidateId,
+    title: interview.title,
+    role: interview.role,
+    completedAt: interview.completedAt,
+    score: interview.score,
+  });
+
   return {
     success: true,
-    score: interview.score ?? 0
+    score: interview.score ?? 0,
   };
 };

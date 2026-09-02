@@ -19,15 +19,11 @@ export const createInterviewService = async (data: any) => {
 
   await publishEvent("interview_events", {
     type: InterviewEventType.INTERVIEW_SCHEDULED,
-
     interviewId: interview._id.toString(),
-
     candidateId: interview.candidateId,
-
     title: interview.title,
-
+    role: interview.role,
     scheduledAt: interview.scheduledAt,
-
     duration: interview.duration,
   });
 
@@ -53,29 +49,86 @@ export const getAllInterviewsService = async (userId: string) => {
   });
 };
 
+// updates an interview and publishes an event when its configuration changes
+
 export const updateInterviewService = async (
   id: string,
   userId: string,
   data: any,
 ) => {
-  return await Interview.findOneAndUpdate(
-    {
-      _id: id,
-      createdBy: userId,
-    },
-    data,
-    {
-      new: true,
-      runValidators: true,
-    },
-  );
-};
+  // fetch the existing interview before updating it so we can detect changes such as a rescheduled interview
 
-export const deleteInterviewService = async (id: string, userId: string) => {
-  return await Interview.findOneAndDelete({
+  const existingInterview = await Interview.findOne({
     _id: id,
     createdBy: userId,
   });
+
+  if (!existingInterview) {
+    return null;
+  }
+
+  const previousScheduledAt = existingInterview.scheduledAt; // Keep the previous scheduled time for notification purposes.
+
+  Object.assign(existingInterview, data); // Apply the validated update fields.
+
+  await existingInterview.save();
+
+  // notify other services that the interview connfiguration changed
+
+  await publishEvent("interview_events", {
+    type: InterviewEventType.INTERVIEW_UPDATED,
+
+    interviewId: existingInterview._id.toString(),
+
+    candidateId: existingInterview.candidateId,
+
+    title: existingInterview.title,
+
+    role: existingInterview.role,
+
+    scheduledAt: existingInterview.scheduledAt,
+
+    previousScheduledAt,
+
+    duration: existingInterview.duration,
+  });
+
+  return existingInterview;
+};
+
+// Deletes an interview and publishes an event so the candidate can be informed
+
+export const deleteInterviewService = async (id: string, userId: string) => {
+  const interview = await Interview.findOne({
+    _id: id,
+    createdBy: userId,
+  });
+
+  if (!interview) {
+    return null;
+  }
+
+  await Interview.deleteOne({
+    _id: interview._id,
+  });
+
+  // Notify other services that the candidate's interview was deleted.
+
+  await publishEvent("interview_events", {
+    type: InterviewEventType.INTERVIEW_DELETED,
+
+    interviewId: interview._id.toString(),
+
+    candidateId: interview.candidateId,
+
+    title: interview.title,
+
+    role: interview.role,
+
+    scheduledAt: interview.scheduledAt,
+  });
+
+  return interview;
 };
 
 export const publishInterviewService = async (id: string, userId: string) => {
@@ -117,9 +170,13 @@ export const publishInterviewService = async (id: string, userId: string) => {
 export const getCandidateInterviewsService = async (candidateId: string) => {
   return await Interview.find({
     candidateId,
-  }).sort({
-    createdAt: -1,
-  });
+  })
+    .select(
+      "_id title description role skills duration totalQuestions difficulty type status candidateId createdBy accessToken expiresAt score startedAt completedAt scheduledAt createdAt updatedAt"
+    )
+    .sort({
+      createdAt: -1,
+    });
 };
 
 export const skipInterviewQuestionService = async (
@@ -206,6 +263,18 @@ export const skipInterviewQuestionService = async (
       answeredQuestions.length > 0 ? totalScore / answeredQuestions.length : 0;
 
     await interview.save();
+
+    // Notify the recruiter that the candidate has completed the interview.
+    await publishEvent("interview_events", {
+      type: InterviewEventType.INTERVIEW_COMPLETED,
+      interviewId: interview._id.toString(),
+      recruiterId: interview.createdBy,
+      candidateId: interview.candidateId,
+      title: interview.title,
+      role: interview.role,
+      completedAt: interview.completedAt,
+      score: interview.score,
+    });
 
     return {
       success: true,

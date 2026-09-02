@@ -12,6 +12,7 @@ enum UserRole {
   ADMIN 
   RECRUITER 
   CANDIDATE 
+  MENTOR
 }
 
 model User {

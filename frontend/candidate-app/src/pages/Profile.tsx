@@ -11,15 +11,21 @@ import {
   uploadResume,
   getFileSignedUrl,
   getFileMetadata,
+  requestAccountDeletion, 
+  verifyAccountDeletion,
   type UpdateUserProfileData,
 } from "../services/user.api";
 import { toast } from "sonner";
+import { AccountDeletionModal } from "../components/AccountDeletionModal";
 
 export function Profile() {
+
   const queryClient = useQueryClient(); // access tanstack cache so we can invalidate server data after profile changes
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<UpdateUserProfileData>({});
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Fetch the authenticated candidate's profile. TanStack Query handles loading, caching, errors, refetching and keeping the server state available
 
@@ -78,6 +84,47 @@ export function Profile() {
       toast.error("Failed to update profile picture.");
     },
   });
+
+  // requests an OTP before allowing the candidate to delete the account 
+
+  const requestDeletionMutation = useMutation({
+    mutationFn: requestAccountDeletion, 
+
+    onSuccess: ()=> {
+      setIsDeleteModalOpen(true) ; 
+      toast.success("Verification OTP sent to your mail.")
+    },
+
+    onError: (error: any) => {
+      console.error("Account deletion request failed: ", error) ; 
+
+      toast.error(error?.response?.data?.message || "Failed to send account deletion OTP")
+    }
+  })
+
+  // Verifies the OTP and completes account deletion 
+
+  const verifyDeletionMutation = useMutation({
+  mutationFn: verifyAccountDeletion,
+
+  onSuccess: async () => {
+    setIsDeleteModalOpen(false);
+
+    toast.success("Your account has been deleted.");
+
+    // Authentication is owned by the Shell.
+    await window.__AUTH_BRIDGE__?.logout();
+  },
+
+  onError: (error: any) => {
+    console.error("Account deletion verification failed:", error);
+
+    toast.error(
+      error?.response?.data?.message ||
+        "Invalid or expired OTP.",
+    );
+     },
+});
 
   // generate a temporary signed URL for the private avatar. The query only runs when an avatar exists
 
@@ -632,6 +679,44 @@ export function Profile() {
           Sign Out
         </button>
       </div>
+
+        {/* Account actions */}
+<div className="space-y-4 pt-2">
+  {/* Delete account */}
+  <div className="flex flex-col gap-4 rounded-xl border border-red-500/20 bg-red-500/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h3 className="text-sm font-semibold text-[#F2EDE4]">
+        Delete account
+      </h3>
+
+      <p className="mt-1 text-sm text-[#817A72]">
+        Your account will be disabled after OTP verification.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => requestDeletionMutation.mutate()}
+      disabled={requestDeletionMutation.isPending}
+      className="shrink-0 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {requestDeletionMutation.isPending
+        ? "Sending OTP..."
+        : "Delete Account"}
+    </button>
+  </div>
+
+</div>
+
+{/* Account deletion OTP modal */}
+
+<AccountDeletionModal
+  open={isDeleteModalOpen}
+  loading={verifyDeletionMutation.isPending}
+  onClose={() => setIsDeleteModalOpen(false)}
+  onVerify={(otp) => verifyDeletionMutation.mutate(otp)}
+/>
+
     </div>
   );
 }

@@ -16,12 +16,16 @@ import {
   getMyProfile,
   updateMyProfile,
   uploadAvatar,
-  getFileSignedUrl
+  getFileSignedUrl,
+  requestAccountDeletion,
+  verifyAccountDeletion,
 } from "../services/user.api";
 import axios from "axios";
+import { AccountDeletionModal } from "../components/AccountDeleltionModal";
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -44,13 +48,13 @@ export default function Profile() {
     queryFn: getMyProfile,
   });
 
-  // fetch the temporary signed URL whenever the recruiter has an avatar 
+  // fetch the temporary signed URL whenever the recruiter has an avatar
 
   const avatarUrlQuery = useQuery({
     queryKey: ["my-profile-avatar", profile?.avatarFileId],
-  queryFn: () => getFileSignedUrl(profile!.avatarFileId!),
-  enabled: !!profile?.avatarFileId,
-  })
+    queryFn: () => getFileSignedUrl(profile!.avatarFileId!),
+    enabled: !!profile?.avatarFileId,
+  });
 
   const handleEdit = () => {
     if (!profile) return;
@@ -116,6 +120,49 @@ export default function Profile() {
 
     uploadAvatarMutation.mutate(file);
   };
+
+  // Requests an OTP before allowing the recruiter to delete the account
+
+  const requestDeletionMutation = useMutation({
+    mutationFn: requestAccountDeletion,
+
+    onSuccess: () => {
+      setIsDeleteModalOpen(true);
+
+      toast.success("Verification OTP sent to your email.");
+    },
+
+    onError: (error) => {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+
+      toast.error(message || "Failed to send account deletion OTP.");
+    },
+  });
+
+  // Verifies the OTP and completes account deletion.
+
+  const verifyDeletionMutation = useMutation({
+    mutationFn: verifyAccountDeletion,
+
+    onSuccess: async () => {
+      setIsDeleteModalOpen(false);
+
+      toast.success("Your account has been deleted.");
+
+      // Authentication is owned by the Shell.
+      await window.__AUTH_BRIDGE__?.logout();
+    },
+
+    onError: (error) => {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+
+      toast.error(message || "Invalid or expired OTP.");
+    },
+  });
 
   const handleLogout = async () => {
     try {
@@ -262,7 +309,7 @@ export default function Profile() {
           <div className="grid gap-6 md:grid-cols-2">
             <ProfileField
               label="First Name"
-              value={isEditing ? form.firstName : profile?.firstName ?? ""}
+              value={isEditing ? form.firstName : (profile?.firstName ?? "")}
               editing={isEditing}
               onChange={(value) =>
                 setForm({
@@ -274,7 +321,7 @@ export default function Profile() {
 
             <ProfileField
               label="Last Name"
-              value={isEditing ? form.lastName : profile?.lastName ?? ""}
+              value={isEditing ? form.lastName : (profile?.lastName ?? "")}
               editing={isEditing}
               onChange={(value) =>
                 setForm({
@@ -286,7 +333,7 @@ export default function Profile() {
 
             <ProfileField
               label="Username"
-              value={isEditing ? form.username : profile?.username ?? ""}
+              value={isEditing ? form.username : (profile?.username ?? "")}
               editing={isEditing}
               onChange={(value) =>
                 setForm({
@@ -308,7 +355,7 @@ export default function Profile() {
 
             <ProfileField
               label="Phone"
-              value={isEditing ? form.phone : profile?.phone ?? ""}
+              value={isEditing ? form.phone : (profile?.phone ?? "")}
               editing={isEditing}
               icon={<Phone className="h-4 w-4" />}
               onChange={(value) =>
@@ -321,7 +368,7 @@ export default function Profile() {
 
             <ProfileField
               label="Location"
-              value={isEditing ? form.location : profile?.location ?? ""}
+              value={isEditing ? form.location : (profile?.location ?? "")}
               editing={isEditing}
               icon={<MapPin className="h-4 w-4" />}
               onChange={(value) =>
@@ -336,7 +383,7 @@ export default function Profile() {
           <div className="mt-6">
             <ProfileField
               label="Headline"
-              value={isEditing ? form.headline : profile?.headline ?? ""}
+              value={isEditing ? form.headline : (profile?.headline ?? "")}
               editing={isEditing}
               onChange={(value) =>
                 setForm({
@@ -370,16 +417,57 @@ export default function Profile() {
           </div>
         </div>
       </div>
-      <div className="mt-6 flex justify-end">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex cursor-pointer items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
+
+      {/* Account actions */}
+
+      <div className="mt-6 space-y-4">
+
+        {/* Delete account */}
+        
+        <div className="flex flex-col gap-4 rounded-xl border border-red-500/20 bg-red-500/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-[#F2EDE4]">
+              Delete account
+            </h3>
+
+            <p className="mt-1 text-sm text-[#817A72]">
+              Your account will be disabled after OTP verification.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => requestDeletionMutation.mutate()}
+            disabled={requestDeletionMutation.isPending}
+            className="shrink-0 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {requestDeletionMutation.isPending
+              ? "Sending OTP..."
+              : "Delete Account"}
+          </button>
+        </div>
+
+        {/* Logout */}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex cursor-pointer items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
+        </div>
       </div>
+
+      {/* Account deletion OTP modal */}
+
+      <AccountDeletionModal
+        open={isDeleteModalOpen}
+        loading={verifyDeletionMutation.isPending}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onVerify={(otp) => verifyDeletionMutation.mutate(otp)}
+      />
     </div>
   );
 }

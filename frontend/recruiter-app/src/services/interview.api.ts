@@ -35,14 +35,15 @@ export interface CreateInterviewData {
   candidateId: string;
 }
 
-export interface UpdateInterviewData {
-  title?: string;
-  description?: string;
-  role?: string;
-  skills?: string[];
-  duration?: number;
-  difficulty?: "EASY" | "MEDIUM" | "HARD";
-  type?: "TECHNICAL" | "HR" | "SYSTEM_DESIGN" | "DSA";
+export interface UpdateInterviewData { 
+  title?: string; 
+  description?: string; 
+  role?: string; 
+  skills?: string[]; 
+  duration?: number; 
+  scheduledAt?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD"; 
+  type?: "TECHNICAL" | "HR" | "SYSTEM_DESIGN" | "DSA"; 
 }
 
 export interface CandidateSearchResult {

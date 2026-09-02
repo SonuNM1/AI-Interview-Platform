@@ -41,7 +41,7 @@ export interface CandidateInterview {
     candidateId: string ; 
     createdBy: string ; 
 
-    accessToken: string ; 
+    accessToken?: string | null ; 
     expiresAt?: string | null ; 
 
     score?: number ; 

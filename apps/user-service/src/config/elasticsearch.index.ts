@@ -57,7 +57,8 @@ export async function initializeCandidateIndex() {
   console.log("✅ Candidate Elasticsearch index created");
 }
 
-// Populate Elasticsearch with candidates already present in PostgreSQL.
+// Populate Elasticsearch with candidates already present in PostgreSQL
+
 export async function indexExistingCandidates() {
   const candidates = await prisma.user.findMany({
     where: {
@@ -81,10 +82,10 @@ export async function indexExistingCandidates() {
         location: candidate.location,
         headline: candidate.headline,
       },
+
+      refresh: true,
     });
   }
 
-  console.log(
-    `✅ Indexed ${candidates.length} existing candidates`,
-  );
+  console.log(`✅ Indexed ${candidates.length} existing candidates`);
 }

@@ -38,3 +38,10 @@ Notice the difference. Auth Service doesn't know who will consume the event. It 
 RabbitMQ stores it. Whenever User Service is available
 
     RabbitMQ -> User Service -> Create Profile 
+
+
+## Database migrations 
+
+## Database migration workflow 
+
+## Database design

@@ -132,7 +132,7 @@ export const startInterviewService = async (accessToken: string) => {
   if (now < interview.scheduledAt) {
     return {
       success: false,
-      message: "Interview has not started yet",
+      message: "Interview can only be started at the scheduled time",
       scheduledAt: interview.scheduledAt,
     };
   }

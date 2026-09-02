@@ -2,7 +2,7 @@ import prisma from "../utils/prisma.js";
 import {
   indexCandidate,
   removeCandidateFromIndex,
-  searchCandidates as searchCandidatesInElastic 
+  searchCandidates as searchCandidatesInElastic,
 } from "./elasticsearch.service.js";
 
 interface CreateUserInput {
@@ -41,7 +41,33 @@ export const createUserProfile = async (data: CreateUserInput) => {
   });
 
   if (existingUser) {
-    return existingUser;
+    // keep the user service profile synchronized with Auth Service
+
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        email: data.email,
+        role: data.role,
+      },
+    });
+
+    // only candidates belong in the candidate search index
+
+    if (updatedUser.role === "CANDIDATE") {
+      await indexCandidate({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        username: updatedUser.username,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        role: updatedUser.role,
+        location: updatedUser.location,
+        headline: updatedUser.headline,
+      });
+    }
+    return updatedUser;
   }
 
   const user = await prisma.user.create({
@@ -54,16 +80,18 @@ export const createUserProfile = async (data: CreateUserInput) => {
 
   // only candidates are stored in the candidate search index
 
-  await indexCandidate({
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    role: user.role,
-    location: user.location,
-    headline: user.headline,
-  });
+  if (user.role === "CANDIDATE") {
+    await indexCandidate({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      location: user.location,
+      headline: user.headline,
+    });
+  }
 
   return user;
 };
@@ -88,16 +116,18 @@ export const updateUserProfile = async (data: updateUserInput) => {
 
   // keep Elasticsearch synchronized with the latest candidate profile
 
-  await indexCandidate({
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    role: user.role,
-    location: user.location,
-    headline: user.headline,
-  });
+  if (user.role === "CANDIDATE") {
+    await indexCandidate({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      location: user.location,
+      headline: user.headline,
+    });
+  }
 
   return user;
 };
@@ -125,7 +155,6 @@ export const getUserProfile = async (data: GetUserInput) => {
 // delete user profile form user service database - development only
 
 export const deleteUserProfile = async (userId: string) => {
-
   const user = await prisma.user.update({
     where: {
       id: userId,
@@ -135,8 +164,8 @@ export const deleteUserProfile = async (userId: string) => {
     },
   });
 
-  if(user.role === "CANDIDATE") {
-    await removeCandidateFromIndex(userId) ; 
+  if (user.role === "CANDIDATE") {
+    await removeCandidateFromIndex(userId);
   }
 
   return {
@@ -213,8 +242,8 @@ export const getUserAvatarFileId = async (userId: string) => {
   return user.avatarFileId;
 };
 
-// search candidates using ElasticSearch instead of PostgreSQL text filtering 
+// search candidates using ElasticSearch instead of PostgreSQL text filtering
 
 export const searchCandidateProfiles = async (query: string) => {
-  return searchCandidatesInElastic(query) ; 
-}
+  return searchCandidatesInElastic(query);
+};

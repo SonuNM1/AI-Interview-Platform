@@ -111,7 +111,7 @@ const interviewSchema = new Schema<IInterview>(
 
     scheduledAt: {
       type: Date,
-      requiredAt: true 
+      required: true 
     },
 
     candidateId: String,

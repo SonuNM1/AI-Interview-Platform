@@ -33,6 +33,8 @@ export const updateInterviewSchema = z.object({
 
     duration: z.number().min(1).max(180).optional(), 
 
+    scheduledAt: z.coerce.date().optional(),
+
     difficulty: z.nativeEnum(InterviewDifficulty).optional(), 
 
     type: z.nativeEnum(InterviewType).optional()

@@ -1,4 +1,8 @@
 import { Bell, Menu, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getNotifications } from "../services/notification.api";
+import { NotificationPopover } from "./NotificationPopover";
+import { useState } from "react";
 
 interface RecruiterTopbarProps {
   onMenuClick: () => void;
@@ -9,6 +13,16 @@ export function RecruiterTopbar({
   onMenuClick,
   onNavigate,
 }: RecruiterTopbarProps) {
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  const { data } = useQuery({
+    queryKey: ["recruiter-notifications"],
+    queryFn: getNotifications,
+  });
+
+  const unreadCount =
+    data?.data?.filter((notification) => !notification.isRead).length ?? 0;
+
   return (
     <header
       className="
@@ -48,56 +62,57 @@ export function RecruiterTopbar({
             Recruiter Dashboard
           </p>
 
-          <p className="hidden text-xs text-[#6F6962] sm:block">
-          </p>
+          <p className="hidden text-xs text-[#6F6962] sm:block"></p>
         </div>
       </div>
 
       <div className="flex items-center gap-1">
         {/* Notifications */}
 
-        <div className="group relative">
+        <div className="relative">
           <button
             type="button"
-            onClick={() => {}}
+            onClick={() => setIsNotificationsOpen((current) => !current)}
             aria-label="Notifications"
             className="
-              relative flex h-10 w-10 cursor-pointer
-              items-center justify-center
-              rounded-lg
-              text-[#8F887F]
-              transition-colors
-              hover:bg-[#24211E]
-              hover:text-[#F2EDE4]
-            "
+      relative flex h-10 w-10 cursor-pointer
+      items-center justify-center
+      rounded-lg
+      text-[#8F887F]
+      transition-colors
+      hover:bg-[#24211E]
+      hover:text-[#F2EDE4]
+    "
           >
             <Bell className="h-[19px] w-[19px]" strokeWidth={1.8} />
 
-            <span
-              className="
-                absolute right-[9px] top-[8px]
-                h-1.5 w-1.5
-                rounded-full
-                bg-[#D98260]
-              "
-            />
+            {unreadCount > 0 && (
+              <span
+                className="
+          absolute right-1.5 top-1.5
+          flex min-h-4 min-w-4
+          items-center justify-center
+          rounded-full
+          bg-[#D98260]
+          px-1
+          text-[9px]
+          font-semibold
+          text-white
+        "
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
 
-          <span
-            className="
-              pointer-events-none absolute right-0 top-12
-              whitespace-nowrap rounded-md
-              border border-[#2F2B27]
-              bg-[#211F1C]
-              px-2.5 py-1.5
-              text-[11px] text-[#F2EDE4]
-              opacity-0 shadow-lg
-              transition-opacity
-              group-hover:opacity-100
-            "
-          >
-            Notifications
-          </span>
+          {isNotificationsOpen && (
+            <NotificationPopover
+              onNavigate={(path) => {
+                setIsNotificationsOpen(false);
+                onNavigate(path);
+              }}
+            />
+          )}
         </div>
 
         {/* Profile */}

@@ -23,6 +23,7 @@ import { verifyEmail } from "../services/auth.service.js";
 import { resendOTPService } from "../services/auth.service.js";
 import { forgotPasswordService } from "../services/auth.service.js";
 import { loginWithGoogle } from "../services/google-auth.service.js";
+import { requestAccountDeletion, verifyAccountDeletion } from "../services/auth.service.js";
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -126,28 +127,6 @@ export const logout = async (req: Request, res: Response) => {
     });
   }
 };
-
-// Delete a user (development only)
-
-export const deleteUserController = async (
-  req: Request, 
-  res: Response, 
-  next: NextFunction
-) => {
-  try {
-    const userId = req.params.id as string ; 
-
-    const result = await deleteUser(userId) ; 
-
-    return res.status(200).json({
-      success: true, 
-      message: "User deleted successfully", 
-      data: result 
-    })
-  } catch (error) {
-    next(error)
-  }
-}
 
 // Verify email OTP 
 
@@ -260,6 +239,64 @@ export const googleLogin = async (
       message: "Google login successful", 
       data: result 
     })
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* Sends an OTP required to delete the authenticated user's account */
+
+export const requestAccountDeletionController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = req.user as JwtPayload;
+
+    const result = await requestAccountDeletion(
+      user.id,
+      user.email,
+    );
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* Verifies the account deletion OTP and soft-deletes the account */
+
+export const verifyAccountDeletionController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = req.user as JwtPayload;
+
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP is required",
+      });
+    }
+
+    const result = await verifyAccountDeletion(
+      user.id,
+      otp,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Account deleted successfully",
+      data: result,
+    });
   } catch (error) {
     next(error);
   }

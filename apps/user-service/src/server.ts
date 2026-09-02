@@ -7,6 +7,7 @@ import {
     consumeEvent
 } from "@repo/shared-rabbitmq"
 import { createUserProfile } from "./services/user.service.js";
+import { initializeCandidateIndex, indexExistingCandidates } from "./config/elasticsearch.index.js";
 
 import app from "./app.js";
 
@@ -15,6 +16,9 @@ const PORT = process.env.PORT || 5001;
 const startServer = async () => {
     try {
         await connectRabbitMQ();
+
+        await initializeCandidateIndex() ; 
+        await indexExistingCandidates() ; 
 
         await consumeEvent(
             "user_events", 

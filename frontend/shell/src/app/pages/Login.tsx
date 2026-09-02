@@ -44,8 +44,10 @@ export function Login() {
       navigateByRole(navigate, response.user.role);
     },
 
-    onError: () => {
-      toast.error("Invalid email or password.");
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || "Unable to sign in. Please try again." ;
+
+      toast.error(message);
     },
   });
 };

@@ -124,3 +124,21 @@ export async function getFileMetadata(
 
     return response.data.data ; 
 }
+
+// Requests an OTP before deleting the candidate account
+
+export async function requestAccountDeletion() {
+  const response = await api.post("/auth/delete-account/request");
+
+  return response.data;
+}
+
+// Verifies the OTP and deletes the candidate account
+
+export async function verifyAccountDeletion(otp: string) {
+  const response = await api.post("/auth/delete-account/verify", {
+    otp,
+  });
+
+  return response.data;
+}
