@@ -10,11 +10,11 @@ import {
   publishInterviewService,
   skipInterviewQuestionService,
   updateInterviewService,
-} from "../services/interview.service.js";
-import {
   createInterviewService,
   getInterviewByIdService,
+  getInterviewReportService
 } from "../services/interview.service.js";
+
 
 export const createInterview = async (req: Request, res: Response) => {
   try {
@@ -307,6 +307,46 @@ export const skipInterviewQuestion = async (
       "Skip Interview Question Error:",
       error,
     );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Internal Server Error",
+    });
+  }
+};
+
+// Returns the existing completed interview report to the recruiter.
+
+export const getInterviewReport = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const interviewId = req.params.interviewId as string;
+    const userId = req.headers["x-user-id"] as string;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID missing",
+      });
+    }
+
+    const result = await getInterviewReportService(
+      interviewId,
+      userId,
+    );
+
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Get Interview Report Error:", error);
 
     return res.status(500).json({
       success: false,

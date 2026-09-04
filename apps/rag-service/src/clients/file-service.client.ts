@@ -31,3 +31,4 @@ export const uploadDocument = async (
 
   return response.data.data;
 };
+

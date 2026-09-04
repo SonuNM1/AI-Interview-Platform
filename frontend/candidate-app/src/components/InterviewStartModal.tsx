@@ -106,6 +106,11 @@ export function InterviewStartModal({
         return;
       }
 
+      if (error instanceof Error) {
+        toast.error(error.message) ; 
+        return ; 
+      }
+
       toast.error("Unable to start the interview. Please try again.");
     },
   });

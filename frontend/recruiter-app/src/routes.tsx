@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import Interviews from "./pages/Interviews";
 import Candidates from "./pages/Candidates";
 import Settings from "./pages/Settings";
+import InterviewReport from "./pages/InterviewReport";
 
 export function AppRoutes() {
   return (
@@ -19,6 +20,11 @@ export function AppRoutes() {
         <Route
           path="/interviews"
           element={<Interviews />}
+        />
+
+        <Route
+          path="/interviews/:interviewId/report"
+          element={<InterviewReport/>}
         />
 
         <Route

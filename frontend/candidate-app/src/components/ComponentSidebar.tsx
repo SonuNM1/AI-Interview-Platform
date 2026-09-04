@@ -3,7 +3,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  FileText,
   Home,
   MessageCircle,
   User,
@@ -25,6 +24,8 @@ export function CandidateSidebar({
   onClose,
   onNavigate,
 }: CandidateSidebarProps) {
+  const currentPath = window.location.pathname;
+
   const [collapsed, setCollapsed] = useState(false);
 
   const navigate = (path: string) => {
@@ -44,20 +45,16 @@ export function CandidateSidebar({
       icon: CalendarDays,
     },
     {
-      label: "Resume",
-      path: "/candidate/resume",
-      icon: FileText,
+      label: "Mock Interview",
+      path: "/candidate/mock-interview",
+      icon: Mic2,
     },
     {
       label: "Mentor Chat",
       path: "/candidate/chat",
       icon: MessageCircle,
     },
-    {
-      label: "Mock Interview", 
-      path: "/candidate/mock-interview", 
-      icon: Mic2
-    }
+    
   ];
 
   return (
@@ -136,11 +133,7 @@ export function CandidateSidebar({
           <button
             type="button"
             onClick={() => setCollapsed((value) => !value)}
-            aria-label={
-              collapsed
-                ? "Expand sidebar"
-                : "Collapse sidebar"
-            }
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="
               hidden
               h-9
@@ -207,6 +200,11 @@ export function CandidateSidebar({
                   key={item.path}
                   label={item.label}
                   collapsed={collapsed}
+                  active={
+                    item.path === "/candidate"
+                      ? currentPath === "/candidate"
+                      : currentPath.startsWith(item.path)
+                  }
                   icon={
                     <Icon
                       className="
@@ -238,6 +236,7 @@ export function CandidateSidebar({
           <SidebarItem
             label="Profile"
             collapsed={collapsed}
+            active={currentPath.startsWith("/candidate/profile")}
             icon={
               <User
                 className="
@@ -248,9 +247,7 @@ export function CandidateSidebar({
                 strokeWidth={1.7}
               />
             }
-            onClick={() =>
-              navigate("/candidate/profile")
-            }
+            onClick={() => navigate("/candidate/profile")}
           />
         </div>
       </aside>
@@ -266,16 +263,17 @@ interface SidebarItemProps {
   label: string;
   collapsed: boolean;
   icon: ReactNode;
+  active: boolean;
   onClick: () => void;
 }
 
-/**
- * Individual sidebar navigation item.
- */
+/* Individual sidebar navigation item with active-route highlighting */
+
 function SidebarItem({
   label,
   collapsed,
   icon,
+  active,
   onClick,
 }: SidebarItemProps) {
   return (
@@ -294,13 +292,9 @@ function SidebarItem({
 
         text-[14px]
         font-medium
-        text-[#918A82]
 
         transition-all
         duration-150
-
-        hover:bg-[#24211E]
-        hover:text-[#F2EDE4]
 
         focus-visible:outline-none
         focus-visible:ring-2
@@ -311,23 +305,33 @@ function SidebarItem({
             ? "justify-center px-2 py-3"
             : "gap-3 px-3 py-[11px]"
         }
+
+        ${
+          active
+            ? "bg-[#2A2420] text-[#F2EDE4]"
+            : "text-[#918A82] hover:bg-[#24211E] hover:text-[#F2EDE4]"
+        }
       `}
     >
       {/* Icon */}
       <span
-        className="
+        className={`
           flex
           h-5
           w-5
           shrink-0
           items-center
           justify-center
-          text-[#777169]
+
           transition-colors
           duration-150
 
-          group-hover:text-[#D98260]
-        "
+          ${
+            active
+              ? "text-[#D98260]"
+              : "text-[#777169] group-hover:text-[#D98260]"
+          }
+        `}
       >
         {icon}
       </span>

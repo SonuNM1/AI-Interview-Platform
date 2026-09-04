@@ -3,12 +3,12 @@ import crypto from "crypto";
 import InterviewQuestion, {
   GeneratedBy,
 } from "../models/interviewQuestion.model.js";
-import { generateQuestion } from "../helpers/questionGenerator.helper.js";
 import { publishEvent, InterviewEventType } from "@repo/shared-rabbitmq";
 import {
   isInterviewTimeExpired,
   completeInterviewByTime,
 } from "../helpers/interviewTime.helper.js";
+import InterviewReport from "../models/interviewReport.model.js";
 
 export const createInterviewService = async (data: any) => {
   const interview = await Interview.create({
@@ -172,7 +172,7 @@ export const getCandidateInterviewsService = async (candidateId: string) => {
     candidateId,
   })
     .select(
-      "_id title description role skills duration totalQuestions difficulty type status candidateId createdBy accessToken expiresAt score startedAt completedAt scheduledAt createdAt updatedAt"
+      "_id title description role skills duration totalQuestions difficulty type status candidateId createdBy accessToken expiresAt score startedAt completedAt scheduledAt createdAt updatedAt",
     )
     .sort({
       createdAt: -1,
@@ -285,5 +285,64 @@ export const skipInterviewQuestionService = async (
   return {
     success: true,
     interviewCompleted: false,
+  };
+};
+
+// returns the existing report for an interview owned by the recruiter. This endpoint only reads the report; report generation happens separately
+
+export const getInterviewReportService = async (
+  interviewId: string,
+  userId: string,
+) => {
+  // verify that this interview belongs to the logged-in recruiter
+
+  const interview = await Interview.findOne({
+    _id: interviewId,
+    createdBy: userId,
+  });
+
+  if (!interview) {
+    return {
+      success: true,
+      message: "Interview not found",
+    };
+  }
+
+  // a report can only exist after the interview has been completed
+
+  if (interview.status !== InterviewStatus.COMPLETED) {
+    return {
+      success: false,
+      message: "Interview is not completed yet.",
+    };
+  }
+
+  // fetch the already-generated report
+
+  const report = await InterviewReport.findOne({
+    interviewId: interview._id,
+  });
+
+  if (!report) {
+    return {
+      success: false,
+      message: "Interview report not found",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      ...report.toObject(),
+
+      // include interview metadata required by the recruiter report /PDF
+
+      interviewTitle: interview.title,
+      role: interview.role,
+      candidateId: interview.candidateId,
+      scheduledAt: interview.scheduledAt,
+      startedAt: interview.startedAt,
+      completedAt: interview.completedAt,
+    },
   };
 };

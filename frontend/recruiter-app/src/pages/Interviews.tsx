@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Copy, Trash2, Send, Pencil } from "lucide-react";
+import { Plus, Trash2, Send, Pencil, FileText } from "lucide-react";
 import { CreateInterviewModal } from "../components/CreateInterviewModal";
 import { DeleteInterviewModal } from "../components/DeleteInterviewModal";
 import { EditInterviewModal } from "../components/EditInterviewModal";
@@ -15,9 +15,12 @@ import {
   type Interview,
   type UpdateInterviewData,
 } from "../services/interview.api";
+import { useNavigate } from "react-router-dom";
 
 export default function Interviews() {
   const [isCreating, setIsCreating] = useState(false);
+
+  const navigate = useNavigate();
 
   const [editingInterview, setEditingInterview] = useState<Interview | null>(
     null,
@@ -215,9 +218,9 @@ export default function Interviews() {
       return;
     }
 
-    if(!editForm.scheduledAt) {
-      toast.error("Interview date and time are required") ; 
-      return ; 
+    if (!editForm.scheduledAt) {
+      toast.error("Interview date and time are required");
+      return;
     }
 
     if (!editForm.scheduledAt) {
@@ -341,20 +344,19 @@ export default function Interviews() {
                     </button>
                   )}
 
-                  {interview.accessToken && (
+                  {/* View report - available only after the interview is completed */}
+                  {interview.status === "COMPLETED" && (
                     <button
                       type="button"
                       onClick={() =>
-                        navigator.clipboard
-                          .writeText(
-                            `${window.location.origin}/interview/${interview.accessToken}`,
-                          )
-                          .then(() => toast.success("Interview link copied"))
+                        navigate(
+                          `/recruiter/interviews/${interview._id}/report`,
+                        )
                       }
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#2F2B27] px-3 py-2 text-sm text-[#A9A29A] transition hover:bg-[#24211E] hover:text-[#F2EDE4]"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#2F2B27] px-3 py-2 text-sm font-medium text-[#A9A29A] transition hover:bg-[#24211E] hover:text-[#F2EDE4]"
                     >
-                      <Copy className="h-4 w-4" />
-                      Copy Link
+                      <FileText className="h-4 w-4" />
+                      View Report
                     </button>
                   )}
 

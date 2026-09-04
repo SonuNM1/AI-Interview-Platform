@@ -6,6 +6,9 @@ import {
   getMockInterviewService,
   startMockInterviewService,
   submitMockInterviewAnswerService,
+  skipMockInterviewQuestionService,
+  endMockInterviewService,
+  getMockInterviewHistoryService
 } from "../services/mockInterview.service.js";
 import { transcribeCandidateAudio } from "../services/transcription.service.js";
 
@@ -168,6 +171,111 @@ export const getMockInterview = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Internal Server Error",
+    });
+  }
+};
+
+// Skips the current mock interview question and moves to the next one
+
+export const skipMockInterviewQuestion = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const userId = req.headers["x-user-id"] as string;
+    const id = req.params.id as string;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+    }
+
+    const result = await skipMockInterviewQuestionService(
+      id,
+      userId,
+    );
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error: any) {
+    console.error("Skip Mock Interview Question Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// Manually ends a mock interview and generates its report
+
+export const endMockInterview = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const userId = req.headers["x-user-id"] as string;
+    const id = req.params.id as string;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+    }
+
+    const result = await endMockInterviewService(
+      id,
+      userId,
+    );
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error: any) {
+    console.error("End Mock Interview Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+// Returns the authenticated candidate's previous mock interviews
+
+export const getMockInterviewHistory = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const userId = req.headers["x-user-id"] as string;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User authentication required",
+      });
+    }
+
+    const result = await getMockInterviewHistoryService(
+      userId,
+    );
+
+    return res.status(200).json(result);
+  } catch (error: any) {
+    console.error("Get Mock Interview History Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
     });
   }
 };

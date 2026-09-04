@@ -28,6 +28,10 @@ router.get(
   interviewProxy,
 );
 
+// get the completed interview report for the recruiter 
+
+router.get("/:interviewId/report", authenticate, authorize("RECRUITER", "ADMIN"), interviewProxy);
+
 // Get interview
 router.get(
   "/:id",

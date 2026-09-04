@@ -19,6 +19,8 @@ export interface IMockInterview extends Document {
 
   startedAt?: Date;
   completedAt?: Date;
+
+  lastActivityAt?: Date; 
 }
 
 const mockInterviewSchema = new Schema(
@@ -72,6 +74,7 @@ const mockInterviewSchema = new Schema(
 
     startedAt: Date,
     completedAt: Date,
+    lastActivityAt: Date 
   },
   {
     timestamps: true,

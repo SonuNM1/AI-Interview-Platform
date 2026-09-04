@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createInterview, deleteInterview, getAllInterviews, getCandidateInterviews, getInterviewById, publishInterview, skipInterviewQuestion, updateInterview } from "../controllers/interview.controller.js";
+import { createInterview, deleteInterview, getAllInterviews, getCandidateInterviews, getInterviewById, getInterviewReport, publishInterview, skipInterviewQuestion, updateInterview } from "../controllers/interview.controller.js";
 
 const router: Router = Router() ;
 
@@ -11,6 +11,10 @@ router.get("/", getAllInterviews) ;
 
 router.get("/candidate", getCandidateInterviews)
 
+// get the completed report for a recruiter's interview 
+
+router.get("/:interviewId/report", getInterviewReport)
+
 router.get("/:id", getInterviewById) ;
 
 router.put("/:id", updateInterview) ; 
@@ -18,9 +22,5 @@ router.put("/:id", updateInterview) ;
 router.delete("/:id", deleteInterview) ;
 
 router.patch("/:id/publish", publishInterview) ; 
-
-// skip the current question when the candidate does not know the answer
-
-router.post("/:accessToken/questions/skip", skipInterviewQuestion)
 
 export default router; 

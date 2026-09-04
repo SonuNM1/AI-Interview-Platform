@@ -1,8 +1,12 @@
-import Interview, { IInterview, InterviewStatus } from "../models/interview.model.js";
+import Interview, {
+  IInterview,
+  InterviewStatus,
+} from "../models/interview.model.js";
 import {
   publishEvent,
   InterviewEventType,
 } from "@repo/shared-rabbitmq";
+import { ensureInterviewReportService } from "../services/interviewReport.service.js";
 
 export const isInterviewTimeExpired = (
   interview: IInterview,
@@ -18,7 +22,7 @@ export const isInterviewTimeExpired = (
   return Date.now() >= expiresAt;
 };
 
-// Completes an interview after its allowed duration expires and notifies the recruiter
+// Completes an interview after its allowed duration expires and notifies the recruiter.
 
 export const completeInterviewByTime = async (
   interview: IInterview,
@@ -28,8 +32,16 @@ export const completeInterviewByTime = async (
 
   await interview.save();
 
-  // Notify the recruiter that the interview ended because its time expired
-  
+  /*
+   * Generate the recruiter report after the interview is automatically
+   * completed because the allowed interview duration has expired.
+   *
+   * ensureInterviewReportService() also handles partially answered
+   * interviews and the case where no questions were answered.
+   */
+  await ensureInterviewReportService(interview);
+
+  // Notify the recruiter that the interview ended because its time expired.
   await publishEvent("interview_events", {
     type: InterviewEventType.INTERVIEW_COMPLETED,
     interviewId: interview._id.toString(),

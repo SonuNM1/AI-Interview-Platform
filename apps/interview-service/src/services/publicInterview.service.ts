@@ -34,7 +34,8 @@ export const getPublicInterviewService = async (
 
   if (
     interview.status !== InterviewStatus.PUBLISHED &&
-    interview.status !== InterviewStatus.SCHEDULED
+    interview.status !== InterviewStatus.SCHEDULED &&
+    interview.status !== InterviewStatus.IN_PROGRESS
   ) {
     return {
       success: false,
@@ -128,7 +129,7 @@ export const startInterviewService = async (accessToken: string) => {
   const now = new Date();
 
   // Candidate is too early.
-  
+
   if (now < interview.scheduledAt) {
     return {
       success: false,

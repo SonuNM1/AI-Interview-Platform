@@ -12,7 +12,7 @@ const mockInterviewProxy = createProxyMiddleware({
   pathRewrite: (path) => `/api/v1/mock-interviews${path}`,
 });
 
-// Create mock interview
+// Create a new mock interview using the candidate's resume.
 
 router.post(
   "/",
@@ -21,7 +21,16 @@ router.post(
   mockInterviewProxy,
 );
 
-// Start mock interview
+// Get the candidate's previous mock interviews This route must come before "/:id" so "history" is not treated as an ID.
+
+router.get(
+  "/history",
+  authenticate,
+  authorize("CANDIDATE"),
+  mockInterviewProxy,
+);
+
+// Start mock interview and generate the first question.
 
 router.post(
   "/:id/start",
@@ -30,7 +39,8 @@ router.post(
   mockInterviewProxy,
 );
 
-// Submit audio answer
+// Submit audio answer for the current question.
+
 router.post(
   "/:id/answer",
   authenticate,
@@ -38,7 +48,26 @@ router.post(
   mockInterviewProxy,
 );
 
-// Get mock interview
+// Skip the current question and record it as 0/10.
+
+router.post(
+  "/:id/skip",
+  authenticate,
+  authorize("CANDIDATE"),
+  mockInterviewProxy,
+);
+
+// Manually end the mock interview and generate its report.
+
+router.post(
+  "/:id/end",
+  authenticate,
+  authorize("CANDIDATE"),
+  mockInterviewProxy,
+);
+
+// Get a specific mock interview with its questions and report.
+
 router.get(
   "/:id",
   authenticate,
@@ -46,7 +75,8 @@ router.get(
   mockInterviewProxy,
 );
 
-// Get final report
+// Get the final report for a completed mock interview.
+
 router.get(
   "/:id/report",
   authenticate,

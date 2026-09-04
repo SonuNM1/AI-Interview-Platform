@@ -2,6 +2,7 @@ import axios from "axios";
 import openai from "../providers/openai.provider.js";
 
 // Fixed interview structure - Each question tests a different area.
+
 const QUESTION_FOCUS = [
   "Professional work experience, responsibilities, problem solving and engineering decisions",
 

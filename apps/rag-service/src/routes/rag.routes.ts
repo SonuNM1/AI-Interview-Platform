@@ -5,7 +5,7 @@ const router = Router();
 
 // Semantic Search
 
-router.post("/search", searchDocumentsController);
+router.post("/search", searchDocumentsController); 
 
 router.post("/search/stream", searchDocumentsStreamController)
 

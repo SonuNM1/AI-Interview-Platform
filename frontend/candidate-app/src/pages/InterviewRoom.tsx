@@ -44,6 +44,18 @@ interface InterviewQuestion {
 export function InterviewRoom() {
   const { accessToken } = useParams<{ accessToken: string }>();
 
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -78,6 +90,28 @@ export function InterviewRoom() {
     },
     enabled: !!accessToken,
   });
+
+  const scheduledTime = interview?.scheduledAt
+    ? new Date(interview.scheduledAt).getTime()
+    : null;
+
+  const timeLeft =
+    scheduledTime !== null ? Math.max(0, scheduledTime - now) : null;
+
+  const isBeforeScheduledTime = timeLeft !== null && timeLeft > 0;
+
+  const formatCountdown = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+      2,
+      "0",
+    )}:${String(seconds).padStart(2, "0")}`;
+  };
 
   // fetch the first interview question
 
@@ -222,13 +256,13 @@ export function InterviewRoom() {
       }
 
       if (result?.interviewCompleted) {
-  setIsInterviewCompleted(true);
-  return;
-}
+        setIsInterviewCompleted(true);
+        return;
+      }
 
-if (result?.data?.nextQuestion) {
-  setNextQuestion(result.data.nextQuestion);
-}
+      if (result?.data?.nextQuestion) {
+        setNextQuestion(result.data.nextQuestion);
+      }
     } catch (error) {
       console.error("Failed to skip interview question:", error);
     } finally {
@@ -398,6 +432,36 @@ if (result?.data?.nextQuestion) {
           <p className="mt-2 text-sm text-[#8B95A5]">
             The interview could not be loaded. Please try again.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (interview?.status === "SCHEDULED" && isBeforeScheduledTime) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center px-4">
+        <div className="w-full max-w-lg rounded-2xl border border-[#3A332E] bg-[#1B1917] p-7 text-center shadow-2xl">
+          <p className="text-sm font-medium text-[#B9674B]">
+            Interview scheduled
+          </p>
+
+          <h2 className="mt-2 text-2xl font-semibold text-[#F2EDE4]">
+            {interview.title}
+          </h2>
+
+          <p className="mt-2 text-sm text-[#817A72]">{interview.role}</p>
+
+          <div className="mt-7 rounded-xl border border-[#332B27] bg-[#211E1B] p-5">
+            <p className="text-sm text-[#9B9188]">Interview starts in</p>
+
+            <p className="mt-2 font-mono text-4xl font-semibold tracking-wider text-[#D98260]">
+              {formatCountdown(timeLeft ?? 0)}
+            </p>
+
+            <p className="mt-3 text-xs text-[#817A72]">
+              You can start the interview when the scheduled time arrives.
+            </p>
+          </div>
         </div>
       </div>
     );

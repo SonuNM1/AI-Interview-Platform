@@ -56,3 +56,13 @@ export const uploadDocumentService = async (
 
   return document;
 };
+
+
+// Finds the RAG document created from an uploaded File Service file.
+
+export const getDocumentByFileId = async (fileId: string) => {
+  return Document.findOne({
+    fileId,
+    status: "READY",
+  });
+};

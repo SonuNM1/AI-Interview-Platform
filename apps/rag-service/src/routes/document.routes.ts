@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer"
-import { uploadDocument } from "../controllers/document.controller.js";
+import { getResumeDocument, uploadDocument } from "../controllers/document.controller.js";
 
 const router = Router();
 
@@ -13,5 +13,9 @@ const upload = multer({
 // Upload a PDF document.
 
 router.post("/upload", upload.single("file"), uploadDocument);
+
+// Get the RAG document generated from an existing uploaded resume
+
+router.get("/document/resume/:fileId", getResumeDocument);
 
 export default router;

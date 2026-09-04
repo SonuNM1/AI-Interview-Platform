@@ -5,6 +5,33 @@ import MockInterview, {
   MockInterviewStatus,
 } from "../models/mockInterview.model.js";
 
+// Returns the existing report or generates and saves a new report using all questions answered or skipped so far.
+
+export const getOrGenerateMockInterviewReport = async (
+  mockInterviewId: string,
+) => {
+  const existingReport = await MockInterviewReport.findOne({
+    mockInterviewId,
+  });
+
+  if (existingReport) {
+    return existingReport;
+  }
+
+  const report = await generateMockInterviewReport(mockInterviewId);
+
+  const savedReport = await MockInterviewReport.create({
+    mockInterviewId,
+    overallScore: report.overallScore,
+    strengths: report.strengths,
+    weaknesses: report.weaknesses,
+    summary: report.summary,
+    recommendation: report.recommendation,
+  });
+
+  return savedReport;
+};
+
 export const generateMockInterviewReport = async (mockInterviewId: string) => {
   const questions = await MockInterviewQuestion.find({
     mockInterviewId,
@@ -56,6 +83,19 @@ Consider:
 
 Do not heavily penalize minor missing details.
 
+IMPORTANT:
+
+The interview may have ended before all planned questions were answered.
+
+If a question has no candidate answer, treat it as unanswered because the
+candidate ended the interview early. Do NOT interpret this as evidence that
+the candidate gave an incorrect technical answer.
+
+Skipped questions are explicitly marked as skipped and have a score of 0.
+Include skipped questions in the overall performance calculation.
+
+Evaluate the candidate fairly based on the answers that were actually given.
+
 Return ONLY valid JSON:
 
 {
@@ -100,13 +140,15 @@ Generate the final interview report.
   return report;
 };
 
+// Returns the final report for a completed mock interview
+
 export const getMockInterviewReport = async (
-  mockInterviewId: string, 
-  userId: string 
+  mockInterviewId: string,
+  userId: string,
 ) => {
   const mockInterview = await MockInterview.findOne({
-    _id: mockInterviewId, 
-    userId 
+    _id: mockInterviewId,
+    userId,
   });
 
   if (!mockInterview) {
@@ -116,8 +158,6 @@ export const getMockInterviewReport = async (
     };
   }
 
-  // report can only be generated after completion
-
   if (mockInterview.status !== MockInterviewStatus.COMPLETED) {
     return {
       success: false,
@@ -125,38 +165,12 @@ export const getMockInterviewReport = async (
     };
   }
 
-  // return existing report if already generated
-
-  const existingReport = await MockInterviewReport.findOne({
-    mockInterviewId: mockInterview._id,
-  });
-
-  if (existingReport) {
-    return {
-      success: true,
-      data: existingReport,
-    };
-  }
-
-  // Generate report if it doesn't exist
-
-  const report = await generateMockInterviewReport(
+  const report = await getOrGenerateMockInterviewReport(
     mockInterview._id.toString(),
   );
 
-  // Save generated report
-
-  const savedReport = await MockInterviewReport.create({
-    mockInterviewId: mockInterview._id,
-    overallScore: report.overallScore,
-    strengths: report.strengths,
-    weaknesses: report.weaknesses,
-    summary: report.summary,
-    recommendation: report.recommendation,
-  });
-
   return {
     success: true,
-    data: savedReport,
+    data: report,
   };
 };

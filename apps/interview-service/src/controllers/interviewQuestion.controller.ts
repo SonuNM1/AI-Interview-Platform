@@ -7,6 +7,7 @@ import {
 } from "../services/interviewQuestion.service.js";
 import { transcribeCandidateAudio } from "../ai/transcription.service.js";
 
+
 export const getFirstQuestion = async (req: Request, res: Response) => {
   try {
     const accessToken = req.params.accessToken as string;

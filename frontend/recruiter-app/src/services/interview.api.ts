@@ -57,6 +57,27 @@ export interface CandidateSearchResult {
   headline: string | null;
 }
 
+export interface InterviewReport {
+  _id: string;
+  interviewId: string;
+
+  // Interview metadata used by the recruiter report and PDF.
+  interviewTitle: string;
+  role: string;
+  candidateId: string;
+  scheduledAt: string;
+  startedAt?: string;
+  completedAt?: string;
+
+  overallScore: number;
+  communicationScore: number;
+  strengths: string[];
+  weaknesses: string[];
+  recommendation: "Hire" | "Hold" | "Reject";
+  summary: string;
+  generatedAt: string;
+}
+
 // Fetch all interviews created by the logged-in recruiter
 
 export async function getInterviews(): Promise<Interview[]> {
@@ -122,4 +143,30 @@ export async function searchCandidates(
 
   return response.data.data ; 
 
+}
+
+// fetches the existing report for a completed interview 
+
+export async function getInterviewReport(
+  interviewId: string,
+): Promise<InterviewReport> {
+  const response = await api.get(
+    `/interviews/${interviewId}/report`,
+  );
+
+  return response.data.data;
+}
+
+export interface CandidateProfile {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+}
+
+export async function getCandidateProfile(
+  candidateId: string,
+): Promise<CandidateProfile> {
+  const response = await api.get(`/users/${candidateId}`);
+
+  return response.data.data;
 }

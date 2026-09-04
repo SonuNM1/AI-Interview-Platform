@@ -12,6 +12,7 @@ import {
   completeInterviewByTime,
 } from "../helpers/interviewTime.helper.js";
 import { publishEvent, InterviewEventType } from "@repo/shared-rabbitmq";
+import { ensureInterviewReportService } from "./interviewReport.service.js";
 
 export const getFirstQuestionService = async (accessToken: string) => {
   const interview = await Interview.findOne({
@@ -180,14 +181,18 @@ export const submitCandidateAnswerService = async (
     );
 
     interview.score =
-      answeredQuestions.length > 0
-        ? totalScore / answeredQuestions.length
-        : 0;
+  answeredQuestions.length > 0
+    ? totalScore / answeredQuestions.length
+    : 0;
 
     await interview.save();
 
-    // Notify the recruiter after the final answer has been
-    // evaluated and the interview has been completed.
+    // generate the final recruiter report after the interview has been completed and the finnal answer has been evaluated 
+
+    await ensureInterviewReportService(interview) ; 
+
+    // Notify the recruiter after the final answer has been evaluated and the interview has been completed
+
     await publishEvent("interview_events", {
       type: InterviewEventType.INTERVIEW_COMPLETED,
       interviewId: interview._id.toString(),
@@ -269,12 +274,6 @@ export const getNextQuestionService = async (accessToken: string) => {
     };
   }
 
-  // Find the most recently answered question.
-  //
-  // IMPORTANT:
-  // We intentionally look only at answered questions.
-  // This prevents an already-created but unanswered Q2
-  // from being treated as the "last question".
   const lastAnsweredQuestion = await InterviewQuestion.findOne({
     interviewId: interview._id,
     answeredAt: { $exists: true },
@@ -291,11 +290,16 @@ export const getNextQuestionService = async (accessToken: string) => {
 
   // If the last answered question is the final question,
   // the interview is complete.
+
   if (lastAnsweredQuestion.questionNumber >= interview.totalQuestions) {
     interview.status = InterviewStatus.COMPLETED;
     interview.completedAt = new Date();
 
     await interview.save();
+
+    // ensure a report exists even if this completion path is reached after the final question 
+
+    await ensureInterviewReportService(interview) ; 
 
     return {
       success: true,
@@ -390,6 +394,10 @@ export const submitInterviewService = async (accessToken: string) => {
   interview.completedAt = new Date();
 
   await interview.save();
+
+  // generate the recruiter report even if the candidate ended the interview before answering all questions 
+
+  await ensureInterviewReportService(interview) ; 
 
   // Notify the recruiter that the candidate has completed the interview.
 
