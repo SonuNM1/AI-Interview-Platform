@@ -37,7 +37,9 @@ export function CandidateTopbar({ onNavigate }: CandidateTopbarProps) {
       "
     >
       <div className="ml-auto flex items-center gap-1">
+
         {/* Notification bell with upcoming interview popover */}
+        
         <div className="relative">
           <button
             type="button"

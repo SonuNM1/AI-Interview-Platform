@@ -2,8 +2,12 @@ import { Router } from "express";
 import {
   createUser,
   deleteUserController,
+  getMentor,
+  getMentorRatingList,
+  getMentors,
   getMyProfile,
   getUser,
+  rateMentor,
   searchCandidates,
   updateUser,
   uploadAvatarController,
@@ -34,5 +38,21 @@ router.get("/:id", getUser);
 router.patch("/:id", updateUser);
 
 router.delete("/delete-user/:id", deleteUserController);
+
+// mentor discovery 
+
+router.get("/mentors", getMentors) ; 
+
+// single mentor profile 
+
+router.get("/mentors/:id", getMentor)
+
+// mentor ratings 
+
+router.get("/mentors/:id/ratings", getMentorRatingList) ; 
+
+// candidate creates/updates a mentor rating 
+
+router.post("/mentors/:id/ratings", rateMentor) ; 
 
 export default router; 

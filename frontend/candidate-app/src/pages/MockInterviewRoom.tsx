@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, Mic, MicOff, PhoneOff, SkipForward } from "lucide-react";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
+
 import { toast } from "sonner";
 
 import {
@@ -16,37 +17,76 @@ import {
   type MockInterviewQuestion,
 } from "../services/mockInterview.api";
 
-import {
-  createAudioRecorder,
-  type AudioRecorder,
-} from "../services/audioRecorder";
+import { createAudioRecorder, type AudioRecorder } from "../services/audioRecorder";
 
-import {
-  createSilenceDetector,
-  type SilenceDetector,
-} from "../services/silenceDetector";
 
 import { speakText, stopSpeaking } from "../services/textToSpeech";
 
 import { EndMockInterviewModal } from "../components/mock-interview/EndMockInterviewModal";
+
 import { SkipQuestionModal } from "../components/interview/SkipQuestionModal";
 
 /**
  * Runs the live mock interview.
- * Handles TTS, automatic recording, silence detection, skipping and completion.
+ *
+ * Flow:
+ * Question generated
+ * → AI speaks question
+ * → AI finishes speaking
+ * → microphone starts
+ * → candidate answers
+ * → silence detection / manual submit
+ * → answer evaluated
+ * → next question generated
+ * → repeat
  */
 export function MockInterviewRoom() {
   const { id } = useParams<{ id: string }>();
 
   const navigate = useNavigate();
 
-  const startRecordingRef = useRef<(() => Promise<void>) | null>(null);
+  /*
+   * Stores the active audio recorder.
+   */
+  const recorderRef = useRef<AudioRecorder | null>(null);
 
+  const initialSilenceContextRef =
+  useRef<AudioContext | null>(null);
+
+  const initialSilenceAnimationFrameRef =
+  useRef<number | null>(null);
+
+  /*
+   * Stores when the current recording started.
+   */
   const recordingStartedAt = useRef<number | null>(null);
 
+  /*
+   * Prevents duplicate answer submissions.
+   */
   const isSubmittingRef = useRef(false);
 
+  /*
+   * Prevents duplicate skip requests.
+   */
   const isSkippingRef = useRef(false);
+
+  /*
+   * Prevents the same READY interview from being started
+   * multiple times.
+   */
+  const hasStartedInterviewRef = useRef(false);
+
+  /*
+   * Keeps the latest recording function available to the
+   * TTS completion callback without making the TTS effect
+   * depend on the recording callback.
+   */
+  const startRecordingRef = useRef<(() => Promise<void>) | null>(null);
+
+  const currentQuestionRef = useRef<MockInterviewQuestion | null>(null);
+
+  const hasCandidateSpokenRef = useRef(false);
 
   const [currentQuestion, setCurrentQuestion] =
     useState<MockInterviewQuestion | null>(null);
@@ -57,6 +97,8 @@ export function MockInterviewRoom() {
 
   const [isRecording, setIsRecording] = useState(false);
 
+  const [isPreparingRecording, setIsPreparingRecording] = useState(false);
+
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -65,6 +107,16 @@ export function MockInterviewRoom() {
 
   const [isEndModalOpen, setIsEndModalOpen] = useState(false);
 
+  /*
+   * Keep the question ref synchronized with state.
+   */
+  useEffect(() => {
+    currentQuestionRef.current = currentQuestion;
+  }, [currentQuestion]);
+
+  /*
+   * Load the mock interview.
+   */
   const interviewQuery = useQuery({
     queryKey: ["mock-interview", id],
 
@@ -79,6 +131,9 @@ export function MockInterviewRoom() {
     enabled: !!id,
   });
 
+  /*
+   * Starts the mock interview and generates Question 1.
+   */
   const startMutation = useMutation({
     mutationFn: () => {
       if (!id) {
@@ -89,9 +144,19 @@ export function MockInterviewRoom() {
     },
 
     onSuccess: (response) => {
-      setCurrentQuestion(response.data.question);
+      const question = response.data.question;
 
-      setQuestionNumber(response.data.question.questionNumber);
+      if (!question) {
+        toast.error("The first interview question could not be generated.");
+
+        return;
+      }
+
+      currentQuestionRef.current = question;
+
+      setCurrentQuestion(question);
+
+      setQuestionNumber(question.questionNumber);
     },
 
     onError: (error: unknown) => {
@@ -112,6 +177,9 @@ export function MockInterviewRoom() {
     },
   });
 
+  /*
+   * Submits the candidate's recorded answer.
+   */
   const submitMutation = useMutation({
     mutationFn: ({
       audioBlob,
@@ -128,6 +196,9 @@ export function MockInterviewRoom() {
     },
   });
 
+  /*
+   * Skips the current question.
+   */
   const skipMutation = useMutation({
     mutationFn: () => {
       if (!id) {
@@ -139,17 +210,29 @@ export function MockInterviewRoom() {
 
     onSuccess: (response) => {
       if (response.interviewCompleted) {
+        stopSpeaking();
+        stopRecording();
+
         navigate(`/candidate/mock-interview/${id}/report`);
+
         return;
       }
 
       const nextQuestion = response.data?.nextQuestion;
 
-      if (nextQuestion) {
-        setCurrentQuestion(nextQuestion);
-        setQuestionNumber(nextQuestion.questionNumber);
-        setElapsedSeconds(0);
+      if (!nextQuestion) {
+        toast.error("The next interview question could not be generated.");
+
+        return;
       }
+
+      currentQuestionRef.current = nextQuestion;
+
+      setCurrentQuestion(nextQuestion);
+
+      setQuestionNumber(nextQuestion.questionNumber);
+
+      setElapsedSeconds(0);
     },
 
     onError: (error: unknown) => {
@@ -170,6 +253,9 @@ export function MockInterviewRoom() {
     },
   });
 
+  /*
+   * Manually ends the mock interview.
+   */
   const endMutation = useMutation({
     mutationFn: () => {
       if (!id) {
@@ -180,6 +266,7 @@ export function MockInterviewRoom() {
     },
 
     onSuccess: () => {
+      stopSpeaking();
       stopRecording();
 
       navigate(`/candidate/mock-interview/${id}/report`);
@@ -204,21 +291,31 @@ export function MockInterviewRoom() {
   });
 
   /**
-   * Starts a READY mock interview automatically.
+   * Starts a READY interview exactly once.
    */
   useEffect(() => {
     const interview = interviewQuery.data?.data?.mockInterview;
 
     if (
       interview?.status === "READY" &&
-      !startMutation.isPending &&
-      !startMutation.isSuccess
+      !hasStartedInterviewRef.current &&
+      !startMutation.isPending
     ) {
+      hasStartedInterviewRef.current = true;
+
       startMutation.mutate();
+
+      return;
     }
 
+    /*
+     * If the interview was already completed before
+     * this page was opened, go directly to the report.
+     */
     if (interview?.status === "COMPLETED") {
-      navigate(`/candidate/mock-interview/${id}/report`, { replace: true });
+      navigate(`/candidate/mock-interview/${id}/report`, {
+        replace: true,
+      });
     }
   }, [interviewQuery.data, id, navigate, startMutation]);
 
@@ -231,7 +328,7 @@ export function MockInterviewRoom() {
     }
 
     const interval = window.setInterval(() => {
-      if (recordingStartedAt.current) {
+      if (recordingStartedAt.current !== null) {
         setElapsedSeconds(
           Math.floor((Date.now() - recordingStartedAt.current) / 1000),
         );
@@ -242,15 +339,104 @@ export function MockInterviewRoom() {
   }, [isRecording]);
 
   /**
-   * Submits the current recorded answer and loads the next question.
+   * Stops the Mock Interview-specific initial-silence monitor.
+   *
+   * This monitor only detects whether the candidate has started speaking.
+   * It never submits or interrupts an answer.
+   */
+  const stopInitialSilenceMonitor = useCallback(() => {
+    if (initialSilenceAnimationFrameRef.current !== null) {
+      window.cancelAnimationFrame(initialSilenceAnimationFrameRef.current);
+      initialSilenceAnimationFrameRef.current = null;
+    }
+
+    if (initialSilenceContextRef.current) {
+      void initialSilenceContextRef.current.close();
+      initialSilenceContextRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Monitors only the initial 8 seconds of an answer.
+   *
+   * Once speech is detected, the monitor stops completely so natural
+   * pauses can never auto-submit the candidate's answer.
+   */
+  const startInitialSilenceMonitor = useCallback(
+    (stream: MediaStream) => {
+      stopInitialSilenceMonitor();
+
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+
+      analyser.fftSize = 512;
+      source.connect(analyser);
+
+      const dataArray = new Uint8Array(analyser.fftSize);
+      const startedAt = Date.now();
+      const SPEECH_THRESHOLD = 12;
+
+      initialSilenceContextRef.current = audioContext;
+
+      const checkVolume = () => {
+        if (initialSilenceContextRef.current !== audioContext) {
+          return;
+        }
+
+        analyser.getByteTimeDomainData(dataArray);
+
+        let sum = 0;
+        for (const value of dataArray) {
+          sum += Math.abs(value - 128);
+        }
+
+        const averageVolume = sum / dataArray.length;
+
+        if (averageVolume >= SPEECH_THRESHOLD) {
+          hasCandidateSpokenRef.current = true;
+          stopInitialSilenceMonitor();
+          return;
+        }
+
+        if (
+          Date.now() - startedAt >= 8000 &&
+          !hasCandidateSpokenRef.current &&
+          !isSubmittingRef.current
+        ) {
+          setShowSkipPrompt(true);
+          stopInitialSilenceMonitor();
+          return;
+        }
+
+        initialSilenceAnimationFrameRef.current =
+          window.requestAnimationFrame(checkVolume);
+      };
+
+      void audioContext.resume();
+      initialSilenceAnimationFrameRef.current =
+        window.requestAnimationFrame(checkVolume);
+    },
+    [stopInitialSilenceMonitor],
+  );
+
+  /**
+   * Manually submits the candidate's recorded answer.
+   *
+   * Silence never submits the answer automatically.
    */
   const submitRecording = useCallback(async () => {
     if (
       isSubmittingRef.current ||
       !recorderRef.current ||
       !id ||
-      !currentQuestion
+      !currentQuestionRef.current
     ) {
+      return;
+    }
+
+    if (!hasCandidateSpokenRef.current) {
+      setShowSkipPrompt(true);
       return;
     }
 
@@ -258,19 +444,23 @@ export function MockInterviewRoom() {
     setIsProcessing(true);
 
     try {
-      silenceDetectorRef.current?.stop();
-      silenceDetectorRef.current = null;
+      stopInitialSilenceMonitor();
 
-      const audioBlob = await recorderRef.current.stop();
+      const recorder = recorderRef.current;
+      const audioBlob = await recorder.stop();
 
-      const duration = recordingStartedAt.current
-        ? Math.round((Date.now() - recordingStartedAt.current) / 1000)
-        : 0;
+      const duration =
+        recordingStartedAt.current !== null
+          ? Math.max(
+              0,
+              Math.round((Date.now() - recordingStartedAt.current) / 1000),
+            )
+          : 0;
 
       recorderRef.current = null;
       recordingStartedAt.current = null;
-
       setIsRecording(false);
+      setIsPreparingRecording(false);
 
       const result = await submitMutation.mutateAsync({
         audioBlob,
@@ -278,28 +468,26 @@ export function MockInterviewRoom() {
       });
 
       if (result.interviewCompleted) {
+        stopSpeaking();
         navigate(`/candidate/mock-interview/${id}/report`);
         return;
       }
 
       const nextQuestion = result.data?.nextQuestion;
 
-      if (nextQuestion) {
-        setCurrentQuestion(nextQuestion);
-
-        setQuestionNumber(nextQuestion.questionNumber);
-
-        setElapsedSeconds(0);
+      if (!nextQuestion) {
+        throw new Error("The next interview question was not generated.");
       }
+
+      currentQuestionRef.current = nextQuestion;
+      setCurrentQuestion(nextQuestion);
+      setQuestionNumber(nextQuestion.questionNumber);
+      setElapsedSeconds(0);
     } catch (error: unknown) {
       console.error("Mock interview answer submission failed:", error);
 
       const axiosError = error as {
-        response?: {
-          data?: {
-            message?: string;
-          };
-        };
+        response?: { data?: { message?: string } };
         message?: string;
       };
 
@@ -312,100 +500,98 @@ export function MockInterviewRoom() {
       isSubmittingRef.current = false;
       setIsProcessing(false);
     }
-  }, [currentQuestion, id, navigate, submitMutation]);
+  }, [id, navigate, stopInitialSilenceMonitor, submitMutation]);
 
   /**
-   * Shows the skip prompt when the candidate has not started speaking.
-   */
-  const handleInitialSilence = useCallback(() => {
-    setShowSkipPrompt(true);
-  }, []);
-
-  /**
-   * Starts recording after the AI finishes speaking.
+   * Starts microphone recording for the current question.
+   *
+   * The room-local monitor checks only whether the candidate starts speaking.
+   * After speech starts, natural pauses are completely ignored.
    */
   const startRecording = useCallback(async () => {
     if (
       isRecording ||
+      isPreparingRecording ||
       isProcessing ||
-      !currentQuestion ||
+      !currentQuestionRef.current ||
       isSubmittingRef.current
     ) {
       return;
     }
 
+    setIsPreparingRecording(true);
+
     try {
       setShowSkipPrompt(false);
+      hasCandidateSpokenRef.current = false;
+      stopInitialSilenceMonitor();
 
       const recorder = createAudioRecorder();
-
       recorderRef.current = recorder;
 
       await recorder.start();
 
+      const stream = recorder.getStream();
+
+      if (!stream) {
+        throw new Error("Microphone stream is unavailable.");
+      }
+
       recordingStartedAt.current = Date.now();
-
       setElapsedSeconds(0);
+      setIsPreparingRecording(false);
+      setIsRecording(true);
 
-      
-
-      const detector = createSilenceDetector(
-        stream,
-        submitRecording,
-        handleInitialSilence,
-      );
-
-      silenceDetectorRef.current = detector;
-
-      detector.start();
+      startInitialSilenceMonitor(stream);
     } catch (error) {
       console.error("Unable to start recording:", error);
 
-      silenceDetectorRef.current?.stop();
-      silenceDetectorRef.current = null;
-
+      stopInitialSilenceMonitor();
       recorderRef.current?.destroy();
       recorderRef.current = null;
-
       recordingStartedAt.current = null;
-
+      setIsPreparingRecording(false);
       setIsRecording(false);
 
       toast.error("Microphone permission is required.");
     }
   }, [
-    currentQuestion,
-    handleInitialSilence,
+    isPreparingRecording,
     isProcessing,
     isRecording,
-    submitRecording,
+    startInitialSilenceMonitor,
+    stopInitialSilenceMonitor,
   ]);
 
+  /*
+   * Keep the latest recording callback available
+   * to the TTS completion handler.
+   */
   useEffect(() => {
     startRecordingRef.current = startRecording;
   }, [startRecording]);
 
   /**
-   * Stops all microphone and silence detector resources.
+   * Stops microphone and Mock Interview-specific initial-silence resources.
    */
-  function stopRecording() {
-    silenceDetectorRef.current?.stop();
-    silenceDetectorRef.current = null;
-
+  const stopRecording = useCallback(() => {
+    stopInitialSilenceMonitor();
     recorderRef.current?.destroy();
     recorderRef.current = null;
-
     recordingStartedAt.current = null;
-
+    setIsPreparingRecording(false);
     setIsRecording(false);
-  }
+    setElapsedSeconds(0);
+  }, [stopInitialSilenceMonitor]);
 
   /**
-   * Skips the current question without displaying evaluation feedback.
+   * Skips the current question without evaluating an answer.
+   *
+   * This is allowed while recording because the initial-silence modal
+   * is displayed while the microphone is active.
    */
   const handleSkip = useCallback(() => {
     if (
-      isRecording ||
       isProcessing ||
       skipMutation.isPending ||
       isSkippingRef.current
@@ -415,69 +601,110 @@ export function MockInterviewRoom() {
 
     isSkippingRef.current = true;
     setShowSkipPrompt(false);
+    stopSpeaking();
+    stopRecording();
 
     skipMutation.mutate(undefined, {
       onSettled: () => {
         isSkippingRef.current = false;
       },
     });
-  }, [isProcessing, isRecording, skipMutation]);
+  }, [isProcessing, skipMutation, stopRecording]);
 
   /**
- * Speaks each new question once and starts recording after the AI finishes speaking.
- */
-useEffect(() => {
-  const question = currentQuestion?.question;
+   * Speaks every newly generated question exactly once.
+   *
+   * The dependency is ONLY the question text.
+   * Changes to recording state, timers, processing state,
+   * or React Query state therefore cannot restart TTS.
+   */
+  useEffect(() => {
+    const question = currentQuestion?.question;
 
-  if (!question) {
-    return;
-  }
+    if (!question) {
+      return;
+    }
 
-  let isActive = true;
+    /*
+     * Marks whether this particular question is
+     * still active.
+     *
+     * If the candidate moves to another question,
+     * old asynchronous TTS callbacks are ignored.
+     */
+    let isActive = true;
 
-  // Stop any previous speech before speaking the new question.
-  stopSpeaking();
-
-  speakText(
-    question,
-
-    () => {
-      if (!isActive) {
-        return;
-      }
-
-      setIsSpeaking(true);
-    },
-
-    () => {
-      if (!isActive) {
-        return;
-      }
-
-      setIsSpeaking(false);
-
-      void startRecordingRef.current?.();
-    },
-  );
-
-  return () => {
-    isActive = false;
-
+    /*
+     * Stop any previous speech before speaking
+     * the newly generated question.
+     */
     stopSpeaking();
 
-    silenceDetectorRef.current?.stop();
-    silenceDetectorRef.current = null;
+    speakText(
+      question,
 
-    recorderRef.current?.destroy();
-    recorderRef.current = null;
+      /*
+       * TTS started.
+       */
+      () => {
+        if (!isActive) {
+          return;
+        }
 
-    recordingStartedAt.current = null;
+        setIsSpeaking(true);
+      },
 
-    setIsSpeaking(false);
-    setIsRecording(false);
-  };
-}, [currentQuestion?.question]);
+      /*
+       * TTS finished.
+       *
+       * Only now should microphone recording begin.
+       */
+      () => {
+        if (!isActive) {
+          return;
+        }
 
+        setIsSpeaking(false);
+
+        void startRecordingRef.current?.();
+      },
+    );
+
+    /*
+     * Cleanup happens only when the actual question
+     * changes or the component unmounts.
+     */
+    return () => {
+      isActive = false;
+
+      stopSpeaking();
+
+      stopInitialSilenceMonitor();
+
+      recorderRef.current?.destroy();
+
+      recorderRef.current = null;
+
+      recordingStartedAt.current = null;
+    };
+  }, [currentQuestion?.question, stopInitialSilenceMonitor]);
+
+  /*
+   * Stop all resources when leaving the interview room.
+   */
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+      stopInitialSilenceMonitor();
+      recorderRef.current?.destroy();
+      recorderRef.current = null;
+      recordingStartedAt.current = null;
+    };
+  }, [stopInitialSilenceMonitor]);
+
+  /*
+   * Initial page loading / first question generation.
+   */
   if (interviewQuery.isLoading || startMutation.isPending) {
     return (
       <FullScreenState
@@ -487,6 +714,10 @@ useEffect(() => {
     );
   }
 
+  /*
+   * Failed to load the interview or no question
+   * could be obtained.
+   */
   if (interviewQuery.isError || !currentQuestion) {
     return (
       <FullScreenState
@@ -498,6 +729,7 @@ useEffect(() => {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#141311] text-[#F2EDE4]">
+      {/* Header */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#2F2B27] px-4 sm:px-6">
         <div>
           <p className="text-sm font-semibold">Mock Interview</p>
@@ -518,20 +750,24 @@ useEffect(() => {
         </button>
       </header>
 
+      {/* Main interview area */}
       <main className="flex flex-1 items-center justify-center overflow-hidden px-5 py-8">
         <div className="w-full max-w-3xl">
+          {/* Question number */}
           <div className="mb-4 text-center">
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#D98260]">
               Question {questionNumber}
             </span>
           </div>
 
+          {/* Question */}
           <div className="rounded-2xl border border-[#2F2B27] bg-[#1B1917] px-6 py-10 text-center shadow-2xl sm:px-12">
             <h1 className="text-xl font-medium leading-9 text-[#F2EDE4] sm:text-2xl">
               {currentQuestion.question}
             </h1>
           </div>
 
+          {/* Microphone state */}
           <div className="mt-10 flex flex-col items-center">
             <div
               className={`
@@ -550,59 +786,96 @@ useEffect(() => {
               )}
             </div>
 
+            {/* Status */}
             <p className="mt-4 text-sm text-[#A9A29A]">
               {isSpeaking
                 ? "AI interviewer is speaking..."
                 : isProcessing
                   ? "Processing your answer..."
-                  : isRecording
-                    ? `Listening · ${formatDuration(elapsedSeconds)}`
-                    : "Preparing microphone..."}
+                  : isPreparingRecording
+                    ? "Preparing microphone..."
+                    : isRecording
+                      ? `Listening · ${formatDuration(elapsedSeconds)}`
+                      : "Ready"}
             </p>
 
-            {!isSpeaking && !isProcessing && !isRecording && (
-              <button
-                type="button"
-                onClick={() => void startRecording()}
-                className="mt-5 flex cursor-pointer items-center gap-2 rounded-lg bg-[#B9674B] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#A85C42]"
-              >
-                <Mic className="h-4 w-4" />
-                Start Answer
-              </button>
-            )}
+            {/* Answer actions */}
+{!isSpeaking &&
+  !isProcessing &&
+  !isPreparingRecording &&
+  !isRecording && (
+    <div className="mt-5 flex items-center justify-center gap-3">
+      {/* Start answer */}
+      <button
+        type="button"
+        onClick={() => void startRecording()}
+        className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#B9674B] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#A85C42]"
+      >
+        <Mic className="h-4 w-4" />
+        Start Answer
+      </button>
 
+      {/* Skip question */}
+      <button
+        type="button"
+        onClick={handleSkip}
+        disabled={skipMutation.isPending}
+        className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#3A3530] px-5 py-3 text-sm font-medium text-[#817A72] transition hover:border-[#5A514A] hover:text-[#F2EDE4] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <SkipForward className="h-4 w-4" />
+        {skipMutation.isPending
+          ? "Skipping..."
+          : "Skip Question"}
+      </button>
+    </div>
+  )}
+
+            {/* Manual submit */}
             {isRecording && (
               <button
                 type="button"
                 onClick={() => void submitRecording()}
-                className="mt-5 flex cursor-pointer items-center gap-2 rounded-lg bg-[#B9674B] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#A85C42]"
+                disabled={submitMutation.isPending || isProcessing}
+                className="mt-5 flex cursor-pointer items-center gap-2 rounded-lg bg-[#B9674B] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#A85C42] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <MicOff className="h-4 w-4" />
                 Submit Answer
               </button>
             )}
 
-            {!isSpeaking && !isRecording && !isProcessing && (
-              <button
-                type="button"
-                onClick={handleSkip}
-                disabled={skipMutation.isPending}
-                className="mt-4 flex cursor-pointer items-center gap-2 text-xs font-medium text-[#817A72] transition hover:text-[#F2EDE4] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <SkipForward className="h-3.5 w-3.5" />
+            {/* Skip */}
+            {!isSpeaking &&
+              !isRecording &&
+              !isPreparingRecording &&
+              !isProcessing && (
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  disabled={skipMutation.isPending}
+                  className="mt-4 flex cursor-pointer items-center gap-2 text-xs font-medium text-[#817A72] transition hover:text-[#F2EDE4] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <SkipForward className="h-3.5 w-3.5" />
 
-                {skipMutation.isPending ? "Skipping..." : "Skip Question"}
-              </button>
-            )}
+                  {skipMutation.isPending ? "Skipping..." : "Skip Question"}
+                </button>
+              )}
           </div>
         </div>
       </main>
 
+      {/* Initial silence modal */}
       {showSkipPrompt && (
         <SkipQuestionModal
+          isSkipping={skipMutation.isPending}
           onContinue={() => {
             setShowSkipPrompt(false);
-            silenceDetectorRef.current?.resume();
+            hasCandidateSpokenRef.current = false;
+
+            const stream = recorderRef.current?.getStream();
+
+            if (stream) {
+              startInitialSilenceMonitor(stream);
+            }
           }}
           onSkip={() => {
             handleSkip();
@@ -610,14 +883,18 @@ useEffect(() => {
         />
       )}
 
+      {/* End interview modal */}
       <EndMockInterviewModal
         open={isEndModalOpen}
         isEnding={endMutation.isPending}
         onCancel={() => setIsEndModalOpen(false)}
         onConfirm={() => {
           stopSpeaking();
+
           stopRecording();
+
           setIsEndModalOpen(false);
+
           endMutation.mutate();
         }}
       />
@@ -625,6 +902,9 @@ useEffect(() => {
   );
 }
 
+/**
+ * Displays a full-screen loading/error state.
+ */
 function FullScreenState({
   icon,
   message,
@@ -642,8 +922,12 @@ function FullScreenState({
   );
 }
 
+/**
+ * Formats recording duration as MM:SS.
+ */
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60);
+
   const remaining = seconds % 60;
 
   return `${String(minutes).padStart(2, "0")}:${String(remaining).padStart(

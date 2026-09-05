@@ -8,7 +8,11 @@ import {
   updateUserAvatar,
   updateUserProfile,
   updateUserResume,
-  searchCandidateProfiles
+  searchCandidateProfiles,
+  getMentorProfile,
+  getMentorProfiles,
+  createMentorRating,
+  getMentorRatings,
 } from "../services/user.service.js";
 import {
   deleteFileFromFileService,
@@ -23,7 +27,7 @@ export const createUser = async (req: Request, res: Response) => {
   try {
     const { id, email, role } = req.body;
 
-    const user = await createUserProfile({ id, email, role});
+    const user = await createUserProfile({ id, email, role });
 
     return res.status(201).json({
       success: true,
@@ -293,9 +297,9 @@ export const uploadResumeController = async (
     if (oldResumeFileId) {
       try {
         await deleteFileFromFileService(
-          oldResumeFileId, 
-          req.headers["x-user-id"] as string, 
-          req.headers["x-user-role"] as string 
+          oldResumeFileId,
+          req.headers["x-user-id"] as string,
+          req.headers["x-user-role"] as string,
         );
       } catch (error) {
         console.error("Failed to delete old resume:", error);
@@ -316,7 +320,7 @@ export const uploadResumeController = async (
   }
 };
 
-// search candidates - recruiter action 
+// search candidates - recruiter action
 
 export const searchCandidates = async (req: Request, res: Response) => {
   try {
@@ -340,10 +344,120 @@ export const searchCandidates = async (req: Request, res: Response) => {
 
     return res.status(500).json({
       success: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Internal Server Error",
+      message: error instanceof Error ? error.message : "Internal Server Error",
     });
   }
 };
+
+// returns a single mentor profile
+
+export const getMentor = async (req: Request, res: Response) => {
+  try {
+    const mentorId = req.params.id as string;
+
+    const mentor = await getMentorProfile(mentorId);
+
+    return res.status(200).json({
+      success: true,
+      data: mentor,
+    });
+  } catch (error) {
+    console.error("Get mentor profile error: ", error);
+
+    return res.status(404).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Mentor not found",
+    });
+  }
+};
+
+// returns mentor profiles for mentor discovery
+
+export const getMentors = async (_req: Request, res: Response) => {
+  try {
+    const mentors = await getMentorProfiles();
+
+    return res.status(200).json({
+      success: true,
+      data: mentors,
+    });
+  } catch (error) {
+    console.error("Get mentors error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch mentors",
+    });
+  }
+};
+
+// Creates or updates a candidate's rating for a mentor
+
+export const rateMentor = async (req: Request, res: Response) => {
+  try {
+    const candidateId = req.headers["x-user-id"] as string;
+
+    const mentorId = req.params.id as string;
+
+    const { rating, review } = req.body;
+
+    if (!candidateId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID missing",
+      });
+    }
+
+    const result = await createMentorRating({
+      mentorId,
+      candidateId,
+      rating: Number(rating),
+      review,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Mentor rating saved successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Rate mentor error: ", error) ; 
+
+    return res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to rate mentor"
+    })
+  }
+};
+
+// returns ratings and aggregate rating information for a mentor 
+
+export const getMentorRatingList = async (
+  req: Request, 
+  res: Response  
+) => {
+  try {
+    const mentorId = req.params.id as string;
+
+    const result =
+      await getMentorRatings(mentorId);
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error(
+      "Get mentor ratings error:",
+      error,
+    );
+
+    return res.status(404).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Mentor not found",
+    });
+  }
+}

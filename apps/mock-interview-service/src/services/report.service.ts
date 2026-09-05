@@ -32,7 +32,15 @@ export const getOrGenerateMockInterviewReport = async (
   return savedReport;
 };
 
-export const generateMockInterviewReport = async (mockInterviewId: string) => {
+/*
+ * Generates the final AI report from all answered or skipped questions.
+ *
+ * The AI evaluates qualitative performance only. The backend calculates
+ * overallScore from the stored question scores to guarantee a 0–10 value.
+ */
+export const generateMockInterviewReport = async (
+  mockInterviewId: string,
+) => {
   const questions = await MockInterviewQuestion.find({
     mockInterviewId,
   }).sort({
@@ -42,6 +50,22 @@ export const generateMockInterviewReport = async (mockInterviewId: string) => {
   if (!questions.length) {
     throw new Error("No interview questions found");
   }
+
+  /*
+   * Calculate the overall score on the server.
+   *
+   * Every question score is already on a 0–10 scale.
+   * Skipped questions have score 0, so they are naturally included.
+   */
+  const totalScore = questions.reduce(
+    (sum, question) => sum + (question.score ?? 0),
+    0,
+  );
+
+  const overallScore =
+    questions.length > 0
+      ? totalScore / questions.length
+      : 0;
 
   const interviewData = questions
     .map(
@@ -85,21 +109,21 @@ Do not heavily penalize minor missing details.
 
 IMPORTANT:
 
-The interview may have ended before all planned questions were answered.
+The backend calculates the overall score from the individual
+question scores. DO NOT calculate or return an overall score.
 
-If a question has no candidate answer, treat it as unanswered because the
-candidate ended the interview early. Do NOT interpret this as evidence that
-the candidate gave an incorrect technical answer.
+If a question has no candidate answer, treat it as unanswered.
+Do NOT interpret an unanswered question as evidence that the
+candidate gave an incorrect technical answer.
 
-Skipped questions are explicitly marked as skipped and have a score of 0.
-Include skipped questions in the overall performance calculation.
+Skipped questions are explicitly marked as skipped and have a score
+of 0. They are already included in the backend overall score.
 
 Evaluate the candidate fairly based on the answers that were actually given.
 
 Return ONLY valid JSON:
 
 {
-  "overallScore": 0,
   "strengths": [],
   "weaknesses": [],
   "summary": "",
@@ -137,7 +161,29 @@ Generate the final interview report.
 
   const report = JSON.parse(result);
 
-  return report;
+  /*
+   * Return the backend-calculated score together with the AI-generated
+   * qualitative report.
+   */
+  return {
+    overallScore: Number(overallScore.toFixed(1)),
+    strengths: Array.isArray(report.strengths)
+      ? report.strengths
+      : [],
+    weaknesses: Array.isArray(report.weaknesses)
+      ? report.weaknesses
+      : [],
+    summary:
+      typeof report.summary === "string"
+        ? report.summary
+        : "",
+    recommendation:
+      report.recommendation === "Strong" ||
+      report.recommendation === "Good" ||
+      report.recommendation === "Needs Improvement"
+        ? report.recommendation
+        : "Needs Improvement",
+  };
 };
 
 // Returns the final report for a completed mock interview

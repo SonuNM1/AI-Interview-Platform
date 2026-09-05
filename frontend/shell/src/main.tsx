@@ -9,7 +9,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {/* catches unexpected React rendering failures */}
     <ErrorBoundary> 
       <Toaster/>
       <App />

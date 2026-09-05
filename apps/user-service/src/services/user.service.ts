@@ -4,11 +4,12 @@ import {
   removeCandidateFromIndex,
   searchCandidates as searchCandidatesInElastic,
 } from "./elasticsearch.service.js";
+import axios from "axios";
 
 interface CreateUserInput {
   id: string;
   email: string;
-  role: "ADMIN" | "RECRUITER" | "CANDIDATE";
+  role: "ADMIN" | "RECRUITER" | "CANDIDATE" | "MENTOR";
 }
 
 interface updateUserInput {
@@ -31,6 +32,13 @@ interface GetUserInput {
 interface updateUserAvatarInput {
   userId: string;
   avatarFileId: string;
+}
+
+interface CreateMentorRatingInput {
+  mentorId: string;
+  candidateId: string;
+  rating: number;
+  review?: string;
 }
 
 export const createUserProfile = async (data: CreateUserInput) => {
@@ -246,4 +254,153 @@ export const getUserAvatarFileId = async (userId: string) => {
 
 export const searchCandidateProfiles = async (query: string) => {
   return searchCandidatesInElastic(query);
+};
+
+// Returns a mentor profile using the existing user model
+
+export const getMentorProfile = async (mentorId: string) => {
+  const mentor = await prisma.user.findFirst({
+    where: {
+      id: mentorId,
+      role: "MENTOR",
+      deletedAt: null,
+    },
+  });
+
+  if (!mentor) {
+    throw new Error("Mentor not found");
+  }
+
+  return mentor;
+};
+
+// returns all active mentor profiles for mentor discovery
+
+export const getMentorProfiles = async () => {
+  return prisma.user.findMany({
+    where: {
+      role: "MENTOR",
+      deletedAt: null,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
+// checks the Payment service before allowing a candidate to review a mentor they have paid for
+
+const verifyMentorPurchase = async (candidateId: string, mentorId: string) => {
+  const paymentServiceUrl = process.env.PAYMENT_SERVICE_URL;
+
+  if (!paymentServiceUrl) {
+    throw new Error("PAYMENT_SERVICE_URL is not configured");
+  }
+
+  const response = await axios.get(
+    `${paymentServiceUrl}/api/v1/internal/subscriptions/eligibility`,
+    {
+      params: {
+        candidateId,
+        mentorId,
+      },
+      headers: {
+        "x-internal-service": "user-service",
+      },
+    },
+  );
+
+  return response.data?.eligible === true;
+};
+
+// Creates or updates a mentor rating after verifying that the candidate has purchased the mentor's plan
+
+export const createMentorRating = async (data: CreateMentorRatingInput) => {
+  const mentor = await prisma.user.findFirst({
+    where: {
+      id: data.mentorId,
+      role: "MENTOR",
+      deletedAt: null,
+    },
+  });
+
+  if (!mentor) {
+    throw new Error("Mentor not found");
+  }
+
+  if (data.mentorId === data.candidateId) {
+    throw new Error("You cannot rate yourself");
+  }
+
+  if (!Number.isInteger(data.rating) || data.rating < 1 || data.rating > 5) {
+    throw new Error("Rating must be between 1 and 5");
+  }
+
+  const eligible = await verifyMentorPurchase(data.candidateId, data.mentorId);
+
+  if (!eligible) {
+    throw new Error("You can only rate mentors whose plan you have purchased");
+  }
+
+  return prisma.mentorRating.upsert({
+    where: {
+      mentorId_candidateId: {
+        mentorId: data.mentorId,
+        candidateId: data.candidateId,
+      },
+    },
+    create: {
+      mentorId: data.mentorId,
+      candidateId: data.candidateId,
+      rating: data.rating,
+      review: data.review,
+    },
+
+    update: {
+      rating: data.rating,
+      review: data.review,
+    },
+  });
+};
+
+// returns the ratings and aggregate rating information for a mentor
+
+export const getMentorRatings = async (mentorId: string) => {
+  const mentor = await prisma.user.findFirst({
+    where: {
+      id: mentorId,
+      role: "MENTOR",
+      deletedAt: null,
+    },
+  });
+
+  if (!mentor) {
+    throw new Error("Mentor not found");
+  }
+
+  const ratings = await prisma.mentorRating.findMany({
+    where: {
+      mentorId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  const totalRatings = ratings.length;
+
+  const averageRating =
+    totalRatings === 0
+      ? 0
+      : Number(
+          (
+            ratings.reduce((sum, item) => sum + item.rating, 0) / totalRatings
+          ).toFixed(1),
+        );
+
+  return {
+    averageRating,
+    totalRatings,
+    ratings,
+  };
 };

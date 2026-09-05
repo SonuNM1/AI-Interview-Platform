@@ -38,7 +38,7 @@ export function createSilenceDetector(
 
   // Candidate has never spoken.
   // After this period we show the skip prompt.
-  const INITIAL_SILENCE_DURATION = 4000;
+  const INITIAL_SILENCE_DURATION = 7000;
 
   const SILENCE_THRESHOLD = 12;
 
