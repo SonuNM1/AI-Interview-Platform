@@ -13,4 +13,5 @@ export const services = {
   ai: process.env.AI_SERVICE_URL!,
   rag: process.env.RAG_SERVICE_URL!,
   mockInterview: process.env.MOCK_INTERVIEW_SERVICE_URL!,
+  payment: process.env.PAYMENT_SERVICE_URL!,
 };

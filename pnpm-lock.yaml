@@ -348,6 +348,9 @@ importers:
 
   apps/chat-service:
     dependencies:
+      '@repo/shared-rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/shared-rabbitmq
       amqplib:
         specifier: ^0.10.9
         version: 0.10.9
@@ -614,6 +617,9 @@ importers:
 
   apps/payment-service:
     dependencies:
+      '@repo/shared-rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/shared-rabbitmq
       cors:
         specifier: ^2.8.5
         version: 2.8.6

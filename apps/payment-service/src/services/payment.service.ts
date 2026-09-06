@@ -7,6 +7,7 @@ import type {
   CreatePaymentOrderInput,
   VerifyPaymentInput,
 } from "../types/payment.types.js";
+import { createHmac } from "node:crypto";
 
 // creates a razorpay order and stores the local payment record 
 
@@ -85,8 +86,12 @@ export const verifyPayment = async (
     };
   }
 
-  const generatedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+  // Creating an HMAC using SHA-256 and the Razorpay secret. This generates the signature that our server expects Razorpay's payment response to have 
+
+  const generatedSignature = createHmac(
+    "sha256", 
+    process.env.RAZORPAY_KEY_SECRET!
+  )
     .update(`${payment.razorpayOrderId}|${input.razorpayPaymentId}`)
     .digest("hex");
 

@@ -9,12 +9,18 @@ import jwt from "jsonwebtoken";
 import { initializeSocket } from "./sockets/socket.js";
 import { registerSocketEvents } from "./sockets/index.js";
 import { AuthenticatedSocket } from "./types/socket.js";
+import { connectRabbitMQ } from "@repo/shared-rabbitmq";
+import { registerMentorshipEventConsumers } from "./events/mentorship.events.js";
 
 const PORT = process.env.PORT || 5005;
 
 const startServer = async () => {
   try {
     await connectDB();
+
+    await connectRabbitMQ() ; 
+
+    await registerMentorshipEventConsumers() ; 
 
     const httpServer = http.createServer(app);
 

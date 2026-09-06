@@ -7,7 +7,6 @@ import {
 } from "../services/message.service.js";
 import { lastSeenUsers, onlineUsers } from "../utils/presence.js";
 import { streamAIResponse } from "../services/ai-service.client.js";
-import jwt from "jsonwebtoken"
 import { AuthenticatedSocket } from "../types/socket.js";
 
 // register all socket events
@@ -81,8 +80,6 @@ export const registerSocketEvents = (io: Server) => {
 
       const { conversationId, text, attachments } = payload;
 
-      const senderId = authenticatedSocket.userId 
-
       const conversation = await Conversation.findById(conversationId) 
 
       if(!conversation) {
@@ -93,17 +90,27 @@ export const registerSocketEvents = (io: Server) => {
         return ; 
       }
 
-      // Save message in MongoDB
+      try {
+        const message = await createMessageService(
+          conversationId, 
+          authenticatedSocket.userId, 
+          text, 
+          attachments 
+        )
 
-      const message = await createMessageService(
-        conversationId,
-        authenticatedSocket.userId,
-        text,
-        attachments,
-      );
+        // broadcast message to everyone in the room 
 
-      // Broadcast message to everyone in the room
-      io.to(conversationId).emit(SOCKET_EVENTS.RECEIVE_MESSAGE, message);
+        io.to(conversationId).emit(
+          SOCKET_EVENTS.RECEIVE_MESSAGE, 
+          message 
+        ) ; 
+      } catch (error) {
+        console.error("Socket message error: ", error) ; 
+
+        socket.emit("error", {
+          message: error instanceof Error ? error.message : "Failed to send message"
+        })
+      }
     });
 
     // handle socket disconnect
@@ -204,8 +211,8 @@ export const registerSocketEvents = (io: Server) => {
 
       const message = await editMessageService(
         messageId, 
+        text,
         authenticatedSocket.userId, 
-        text
       );
 
       // Notify everyone in the conversation

@@ -4,6 +4,7 @@ import {
   getUserConversationsService,
 } from "../services/conversation.service.js";
 import { getConversationMessagesService } from "../services/message.service.js";
+import { ConversationType } from "../models/Conversation.model.js";
 
 // creates a conversation
 
@@ -12,7 +13,10 @@ export const createConversation = async (
   res: Response,
 ): Promise<Response> => {
   try {
-    const { participantId } = req.body;
+    const { 
+      participantId, 
+      type = ConversationType.DIRECT 
+     } = req.body;
 
     const userId = req.headers["x-user-id"] as string;
 
@@ -37,7 +41,20 @@ export const createConversation = async (
       });
     }
 
-    const conversation = await createConversationService(userId, participantId);
+    // mentor chat is only available when the candidate has an active paid mentorship subscription - the payment service grants this access through RabbitMQ and Chat Service checks its local authorization projection. We need to know which participant is the candidate and which one is the mentor. x-user-role tells us the role of the authenticated requester 
+
+    if (type !== ConversationType.DIRECT && type !== ConversationType.MENTORSHIP) {
+      return res.status(400).json({
+        success: false, 
+        message: "Invalid conversation type."
+      })
+    }
+
+    const conversation = await createConversationService(
+      userId, 
+      participantId, 
+      type 
+    );
 
     return res.status(201).json({
       success: true,

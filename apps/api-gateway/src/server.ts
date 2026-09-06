@@ -9,6 +9,7 @@ import interviewRoutes from "./routes/interview.routes.js";
 import publicInterviewRoutes from "./routes/public-interview.routes.js";
 import mockInterviewRoutes from "./routes/mock-interview.routes.js";
 import candidateInterviewRoutes from "./routes/candidate-interview.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 const app = express();
 
@@ -45,6 +46,8 @@ app.use("/api/v1/mock-interviews", mockInterviewRoutes);
 // Candidate interview routes.
 
 app.use("/api/v1/candidate/interviews", candidateInterviewRoutes);
+
+app.use("/api/v1/payments", paymentRoutes);
 
 app.use(express.json());
 

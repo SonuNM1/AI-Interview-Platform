@@ -25,8 +25,10 @@ export interface IPayment {
 
   status: PaymentStatus;
 
-  razorpayOrderId: string;
+  razorpayOrderId?: string;
   razorpayPaymentId?: string;
+
+  razorpaySubscriptionId?: string; // Present when this payment belongs to a Razorpay recurring subscription
 
   mentorshipId?: string;
 
@@ -38,73 +40,80 @@ export interface IPayment {
   updatedAt: Date;
 }
 
-const paymentSchema = new Schema<IPayment>({
-  userId: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  mentorId: {
-    type: String,
-    index: true,
-  },
-  type: {
-    type: String,
-    enum: Object.values(PaymentType),
-    required: true,
-  },
+const paymentSchema = new Schema<IPayment>(
+  {
+    userId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    mentorId: {
+      type: String,
+      index: true,
+    },
+    type: {
+      type: String,
+      enum: Object.values(PaymentType),
+      required: true,
+    },
 
-  /*
+    /*
 Amount is stored in the smallest currency unit. Example: ₹999 -> 99900 paise
 */
 
-  amount: {
-    type: Number,
-    required: true,
-    min: 1,
-  },
+    amount: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
 
-  currency: {
-    type: String,
-    required: true,
-    default: "INR",
-  },
-  status: {
-    type: String,
-    enum: Object.values(PaymentStatus),
-    required: true,
-    default: PaymentStatus.CREATED,
-    index: true,
-  },
+    currency: {
+      type: String,
+      required: true,
+      default: "INR",
+    },
+    status: {
+      type: String,
+      enum: Object.values(PaymentStatus),
+      required: true,
+      default: PaymentStatus.CREATED,
+      index: true,
+    },
 
-  razorpayOrderId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
-  },
-  razorpayPaymentId: {
-    type: String,
-    unique: true,
-    sparse: true,
-    index: true,
-  },
+    razorpayOrderId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    razorpayPaymentId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    razorpaySubscriptionId: {
+      type: String,
+      index: true,
+    },
 
-  mentorshipId: {
-    type: String,
-    index: true,
-  },
+    mentorshipId: {
+      type: String,
+      index: true,
+    },
 
-  receipt: {
-    type: String,
-    required: true,
-    unique: true,
+    receipt: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    failureReason: {
+      type: String,
+    },
   },
-  failureReason: {
-    type: String 
-  }
-}, {
-    timestamps: true 
-});
+  {
+    timestamps: true,
+  },
+);
 
-export default model<IPayment>("Payment", paymentSchema) ; 
+export default model<IPayment>("Payment", paymentSchema);

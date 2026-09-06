@@ -1,11 +1,26 @@
-import Conversation, { ConversationDocument } from "../models/Conversation.model.js"
+import Conversation, { ConversationDocument, ConversationType } from "../models/Conversation.model.js"
+import { hasMentorshipAccess } from "./mentorship-access.service.js";
 
 // creating a new conversation or returning the existing one 
 
 export const createConversationService = async (
     userId: string, 
-    participantId: string 
+    participantId: string, 
+    type: ConversationType = ConversationType.DIRECT 
 ) => {
+
+    // mentor chat requires an active mentorship subscription. The candidate creates the mentorship conversation after payment
+
+    if(type === ConversationType.MENTORSHIP) {
+        const hasAccess = await hasMentorshipAccess(
+            userId, 
+            participantId
+        ) ; 
+
+        if(!hasAccess) {
+            throw new Error("An active mentorship subscription is required to start this chat.")
+        }
+    }
 
     // normalizing participant order to prevent duplicate conversations 
 
@@ -16,7 +31,8 @@ export const createConversationService = async (
             $all: normalizedParticipants, 
             $size: 2
         }, 
-        isGroup: false 
+        isGroup: false,
+        type
     })
 
     if(existingConversation) {
@@ -25,7 +41,8 @@ export const createConversationService = async (
 
     return Conversation.create({
         participants: normalizedParticipants, 
-        isGroup: false 
+        isGroup: false,
+        type 
     })
 }
 

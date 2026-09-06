@@ -1,6 +1,7 @@
 import Message, { MessageDocument } from "../models/message.model.js";
 import Conversation from "../models/Conversation.model.js";
 import { uploadAttachment } from "./file-service.client.js";
+import { hasMentorshipAccess } from "./mentorship-access.service.js";
 
 // Creates a new message
 
@@ -15,6 +16,7 @@ export const createMessageService = async (
     mimeType: string;
   }[],
 ): Promise<MessageDocument> => {
+
   const conversation = await Conversation.findOne({
     _id: conversationId,
     participants: senderId,
@@ -22,6 +24,24 @@ export const createMessageService = async (
 
   if (!conversation) {
     throw new Error("You are not a participant in this conversation.");
+  }
+
+  // mentorship chat requires an active subscription to send messages. Existing DIRECT conversations are unaffected
+
+  if (conversation.type === "MENTORSHIP") {
+    const otherParticipant = conversation.participants.find(
+      (participantId) => participantId !== senderId,
+    );
+
+    if (
+      !otherParticipant ||
+      (!(await hasMentorshipAccess(senderId, otherParticipant)) &&
+        !(await hasMentorshipAccess(otherParticipant, senderId)))
+    ) {
+      throw new Error(
+        "Your mentorship subscription is not active. You cannot send messages.",
+      );
+    }
   }
 
   const message = await Message.create({
@@ -45,16 +65,15 @@ export const getConversationMessagesService = async (
   page: number = 1,
   limit: number = 20,
 ): Promise<MessageDocument[]> => {
-
   console.log("Conversation ID:", conversationId);
 
   const conversation = await Conversation.findOne({
-    _id: conversationId, 
-    participants: userId 
-  }) ; 
+    _id: conversationId,
+    participants: userId,
+  });
 
-  if(!conversation) {
-    throw new Error("You must be a participant in the conversation.")
+  if (!conversation) {
+    throw new Error("You must be a participant in the conversation.");
   }
 
   const messages = await Message.find({
@@ -79,7 +98,6 @@ export const editMessageService = async (
   text: string,
   userId: string,
 ): Promise<MessageDocument> => {
-  
   // Find the message
 
   const message = await Message.findById(messageId);
@@ -111,7 +129,7 @@ export const editMessageService = async (
 
 export const deleteMessageService = async (
   messageId: string,
-  userId: string 
+  userId: string,
 ): Promise<MessageDocument> => {
   // Find the message
 
@@ -123,7 +141,7 @@ export const deleteMessageService = async (
 
   if (message.senderId !== userId) {
     throw new Error("You can only delete your own messages.");
-}
+  }
 
   // Replace the original text
 
@@ -153,6 +171,7 @@ export const sendMessageService = async (
   text: string,
   file?: Express.Multer.File,
 ): Promise<MessageDocument> => {
+
   const conversation = await Conversation.findOne({
     _id: conversationId,
     participants: senderId,
@@ -160,6 +179,24 @@ export const sendMessageService = async (
 
   if (!conversation) {
     throw new Error("You are not a participant in this conversation.");
+  }
+
+  // Mentorship chat requires an active subscription to send messages
+  
+  if (conversation.type === "MENTORSHIP") {
+    const otherParticipant = conversation.participants.find(
+      (participantId) => participantId !== senderId,
+    );
+
+    if (
+      !otherParticipant ||
+      (!(await hasMentorshipAccess(senderId, otherParticipant)) &&
+        !(await hasMentorshipAccess(otherParticipant, senderId)))
+    ) {
+      throw new Error(
+        "Your mentorship subscription is not active. You cannot send messages.",
+      );
+    }
   }
 
   const attachments: {
@@ -187,11 +224,18 @@ export const sendMessageService = async (
 
   // Save message
 
-  return Message.create({
+  const message = await Message.create({
     conversationId,
     senderId,
     text,
     attachments,
   });
+
+  // keep the conversation's lastMessageId in sync with the newest message, including messages that contain attachments
+
+  await Conversation.findByIdAndUpdate(conversationId, {
+    lastMessageId: message._id,
+  });
+
+  return message;
 };
- 

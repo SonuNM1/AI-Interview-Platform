@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
+import subscriptionRoutes from "./routes/subscription.routes.js";
 
 const app = express();
 
@@ -20,7 +21,13 @@ app.use("/api/v1/payments/webhooks", express.raw({
 
 app.use(express.json());
 
-app.use("/api/v1/payments", paymentRoutes) ; // payment APIs 
+// payment APIs 
+
+app.use("/api/v1/payments", paymentRoutes) ; 
+
+// monthly mentorship subscription APIs 
+
+app.use("/api/v1/payments/subscription", subscriptionRoutes)
 
 app.get("/health", (_req, res) => {
   return res.status(200).json({
