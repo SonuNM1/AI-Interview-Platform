@@ -1,6 +1,16 @@
 import axios from "axios";
+import api from "./api";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ; 
+
+export interface CreateMentorshipSubscriptionResponse {
+  subscriptionId: string;
+  razorpaySubscriptionId: string;
+  razorpayPlanId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+}
 
 // Creates a razorpay order on the backend 
 
@@ -36,3 +46,18 @@ export const verifyPayment = async (
 
     return response.data ; 
 }
+
+// Creates a monthly Razorpay mentorship subscription
+
+export const createMentorshipSubscription = async (
+  mentorId: string,
+) => {
+  const response = await api.post(
+    "/payments/subscription/mentorship",
+    {
+      mentorId,
+    },
+  );
+
+  return response.data;
+};

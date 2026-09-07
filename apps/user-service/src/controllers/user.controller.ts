@@ -13,6 +13,8 @@ import {
   getMentorProfiles,
   createMentorRating,
   getMentorRatings,
+  getMyMentorProfile,
+  updateMentorProfile,
 } from "../services/user.service.js";
 import {
   deleteFileFromFileService,
@@ -371,18 +373,32 @@ export const getMentor = async (req: Request, res: Response) => {
   }
 };
 
-// returns mentor profiles for mentor discovery
+// returns mentor profiles for mentor discovery. Optional q parameter is searched through Elasticsearch 
 
-export const getMentors = async (_req: Request, res: Response) => {
+export const getMentors = async (
+  req: Request,
+  res: Response,
+) => {
   try {
-    const mentors = await getMentorProfiles();
+
+    // read the optional elasticsearch search query 
+
+    const query = String(
+      req.query.q ?? "",
+    ).trim();
+
+    const mentors =
+      await getMentorProfiles(query); // fetch enabled mentors, using elasticsearch when a query exists 
 
     return res.status(200).json({
       success: true,
       data: mentors,
     });
   } catch (error) {
-    console.error("Get mentors error:", error);
+    console.error(
+      "Get mentors error:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
@@ -461,3 +477,113 @@ export const getMentorRatingList = async (
     });
   }
 }
+
+// Returns the authenticated mentor's marketplace settings
+
+export const getMyMentor = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    // The API Gateway adds the authenticated user's ID.
+    const mentorId =
+      req.headers["x-user-id"] as string;
+
+    if (!mentorId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID missing",
+      });
+    }
+
+    // Fetch the mentor's marketplace profile.
+    const mentorProfile =
+      await getMyMentorProfile(mentorId);
+
+    return res.status(200).json({
+      success: true,
+      data: mentorProfile,
+    });
+  } catch (error) {
+    console.error(
+      "Get my mentor profile error:",
+      error,
+    );
+
+    return res.status(404).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Mentor profile not found",
+    });
+  }
+};
+
+// Updates the authenticated mentor's marketplace settings
+
+export const updateMyMentor = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    // The API Gateway adds the authenticated user's ID.
+    const mentorId =
+      req.headers["x-user-id"] as string;
+
+    if (!mentorId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID missing",
+      });
+    }
+
+    const {
+      monthlyMentorshipAmount,
+      mentorshipExpertise,
+      mentorshipEnabled,
+    } = req.body;
+
+    // Validate the basic request structure before calling the service.
+    if (
+      !Array.isArray(mentorshipExpertise)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Mentorship expertise must be an array",
+      });
+    }
+
+    // Save the marketplace configuration.
+    const mentorProfile =
+      await updateMentorProfile({
+        mentorId,
+        monthlyMentorshipAmount:
+          Number(monthlyMentorshipAmount),
+        mentorshipExpertise,
+        mentorshipEnabled:
+          Boolean(mentorshipEnabled),
+      });
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Mentorship profile updated successfully",
+      data: mentorProfile,
+    });
+  } catch (error) {
+    console.error(
+      "Update mentor profile error:",
+      error,
+    );
+
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to update mentor profile",
+    });
+  }
+};

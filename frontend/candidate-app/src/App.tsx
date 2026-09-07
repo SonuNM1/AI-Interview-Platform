@@ -12,6 +12,9 @@ import { InterviewRoom } from "./pages/InterviewRoom";
 import { MockInterview } from "./pages/MockInterview";
 import { MockInterviewRoom } from "./pages/MockInterviewRoom";
 import { MockInterviewReport } from "./pages/MockInterviewReport";
+import { Mentors } from "./pages/Mentor/Mentors";
+import { MentorProfile } from "./pages/Mentor/MentorProfile";
+import { MentorChat } from "./pages/Mentor/MentorChat";
 
 export default function App() {
   return (
@@ -34,6 +37,14 @@ export default function App() {
             path="/mock-interview/:id/report"
             element={<MockInterviewReport />}
           />
+
+          {/* mentor pages */}
+
+          <Route path="/mentors" element={<Mentors />} />
+
+          <Route path="/mentors/:mentorId" element={<MentorProfile />} />
+
+          <Route path="/chat" element={<MentorChat />} />
         </Routes>
       </CandidateLayout>
 

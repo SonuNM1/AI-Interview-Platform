@@ -57,6 +57,31 @@ router.get(
   userProxy,
 );
 
+// mentor marketplace - candidate discovery 
+
+router.get(
+  "/mentors",
+  authenticate,
+  authorize("CANDIDATE", "MENTOR", "ADMIN"),
+  userProxy,
+);
+
+// logged-in mentor marketplace settings 
+
+router.get(
+  "/mentors/me",
+  authenticate,
+  authorize("MENTOR"),
+  userProxy,
+);
+
+router.patch(
+  "/mentors/me",
+  authenticate,
+  authorize("MENTOR"),
+  userProxy,
+);
+
 // Public profile lookup
 
 router.get("/:id", userProxy);

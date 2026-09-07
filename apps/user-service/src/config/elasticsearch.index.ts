@@ -2,6 +2,7 @@ import prisma from "../utils/prisma.js";
 import { elasticsearchClient } from "./elasticSearch.js";
 
 export const CANDIDATE_INDEX = "candidates";
+export const MENTOR_INDEX = "mentors";
 
 // Create the candidate index with an explicit Elasticsearch mapping.
 

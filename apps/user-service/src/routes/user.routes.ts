@@ -5,10 +5,12 @@ import {
   getMentor,
   getMentorRatingList,
   getMentors,
+  getMyMentor,
   getMyProfile,
   getUser,
   rateMentor,
   searchCandidates,
+  updateMyMentor,
   updateUser,
   uploadAvatarController,
   uploadResumeController,
@@ -42,6 +44,10 @@ router.delete("/delete-user/:id", deleteUserController);
 // mentor discovery 
 
 router.get("/mentors", getMentors) ; 
+
+router.get("/mentors/me", getMyMentor);
+
+router.patch("/mentors/me", updateMyMentor);
 
 // single mentor profile 
 

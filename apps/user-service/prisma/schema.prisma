@@ -42,12 +42,36 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt 
+
+  // marketplace configuration belonging to this mentor 
+
+  mentorProfile MentorProfile?
+}
+
+model MentorProfile {
+  id String @id @default(cuid())
+
+  mentorId String @unique // references the user who owns this mentor marketplace profile 
+
+  // defines the user relation for Prisma 
+
+  mentor User @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  monthlyMentorshipAmount Int 
+
+  mentorshipExpertise String[] @default([])
+
+  mentorshipEnabled Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt 
 }
 
 model MentorRating {
   id String @id @default(cuid())
 
   mentorId String 
+
   candidateId String 
 
   rating Int 
