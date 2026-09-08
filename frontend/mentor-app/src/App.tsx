@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import MentorshipSettings from "./pages/MentorshipSettings";
 import Profile from "./pages/Profile";
 import { Toaster } from "sonner";
+import Chats from "./pages/Chats";
 
 export default function App() {
   return (
@@ -15,6 +16,8 @@ export default function App() {
           <Route index element={<Dashboard />} />
 
           <Route path="settings" element={<MentorshipSettings />} />
+
+          <Route path="chats" element={<Chats/>} />
 
           <Route path="profile" element={<Profile />} />
         </Route>

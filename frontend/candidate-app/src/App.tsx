@@ -45,6 +45,11 @@ export default function App() {
           <Route path="/mentors/:mentorId" element={<MentorProfile />} />
 
           <Route path="/chat" element={<MentorChat />} />
+
+          <Route
+            path="/chat/:mentorId"
+            element={<MentorChat/>}
+          />
         </Routes>
       </CandidateLayout>
 

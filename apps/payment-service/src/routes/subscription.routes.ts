@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   createMentorshipSubscriptionController,
+  verifyMentorshipSubscriptionPaymentController,
 } from "../controllers/subscription.controller.js";
 
 const router = Router();
@@ -12,4 +13,8 @@ router.post( "/mentorship",
   createMentorshipSubscriptionController,
 );
 
-export default router;
+// verifies the razorpay subscription checkout response 
+
+router.post("/mentorship/verify", verifyMentorshipSubscriptionPaymentController)
+
+export default router; 

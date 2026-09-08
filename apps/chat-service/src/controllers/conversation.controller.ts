@@ -63,9 +63,20 @@ export const createConversation = async (
   } catch (error) {
     console.error("Create conversation error: ", error);
 
+    const message = error instanceof Error ? error.message : "Failed to create conversation."
+
+    // a candidate without an active mentorship subscription is authenticated but not authorized for mentorship chat 
+
+    if(message.includes("active mentorship subscription")) {
+      return res.status(403).json({
+        success: false, 
+        message 
+      })
+    }
+
     return res.status(500).json({
       success: false,
-      message: "Failed to create conversation.",
+      message 
     });
   }
 };

@@ -82,6 +82,20 @@ router.patch(
   userProxy,
 );
 
+// Public mentor profile lookup.
+router.get("/mentors/:id", userProxy);
+
+// Mentor ratings.
+router.get("/mentors/:id/ratings", userProxy);
+
+// Candidate creates or updates a mentor rating.
+router.post(
+  "/mentors/:id/ratings",
+  authenticate,
+  authorize("CANDIDATE"),
+  userProxy,
+);
+
 // Public profile lookup
 
 router.get("/:id", userProxy);

@@ -1,17 +1,16 @@
 import Subscription, {
   SubscriptionStatus,
 } from "../models/subscription.model.js";
-
 import Payment, {
   PaymentStatus,
   PaymentType,
 } from "../models/payment.model.js";
-
 import razorpay from "../providers/razorpay.provider.js";
+import axios from "axios";
+import crypto from "node:crypto"
 
 interface CreateMentorshipSubscriptionInput {
   mentorId: string;
-  amount: number;
 }
 
 // creates a razorpay monthly plan and subscription for a candidate purchasing mentorship access
@@ -27,16 +26,53 @@ export const createMentorshipSubscription = async (
     };
   }
 
-  if (!input.amount || input.amount <= 0) {
+  // Fetch the mentor's current marketplace profile from User Service. The candidate is never trusted to provide the subscription price
+
+  const userServiceUrl = process.env.USER_SERVICE_URL;
+
+  if (!userServiceUrl) {
     return {
       success: false,
-      message: "Invalid subscription amount",
+      message: "USER_SERVICE_URL is not configured",
     };
   }
 
-  // convert rupees to paise
+  const mentorResponse = await axios.get(
+    `${userServiceUrl}/api/v1/users/mentors/${input.mentorId}`,
+  );
 
-  const amount = Math.round(input.amount * 100);
+  const mentor = mentorResponse.data?.data;
+
+  if (!mentor) {
+    return {
+      success: false,
+      message: "Mentor not found",
+    };
+  }
+
+  if (!mentor.mentorProfile?.mentorshipEnabled) {
+    return {
+      success: false,
+      message: "This mentor is currently unavailable for mentorship",
+    };
+  }
+
+  const monthlyMentorshipAmount = Number(
+    mentor.mentorProfile.monthlyMentorshipAmount,
+  );
+
+  if (
+    !Number.isInteger(monthlyMentorshipAmount) ||
+    monthlyMentorshipAmount <= 0
+  ) {
+    return {
+      success: false,
+      message: "Mentor has an invalid mentorship price",
+    };
+  }
+
+  // Razorpay expects the amount in paise.
+  const amount = Math.round(monthlyMentorshipAmount * 100);
 
   //   creates the razorpay plan
 
@@ -45,7 +81,9 @@ export const createMentorshipSubscription = async (
     interval: 1,
 
     item: {
-      name: `Mentorship with ${input.mentorId}`,
+      name: `Mentorship with ${
+        `${mentor.firstName ?? ""} ${mentor.lastName ?? ""}`.trim() || "Mentor"
+      }`,
       amount,
       currency: "INR",
       description: "Monthly mentor subscription",
@@ -75,8 +113,8 @@ export const createMentorshipSubscription = async (
     },
   });
 
-  // store our local subscription model 
-  
+  // store our local subscription model
+
   const subscription = await Subscription.create({
     userId,
     mentorId: input.mentorId,
@@ -107,6 +145,55 @@ export const createMentorshipSubscription = async (
       currency: "INR",
 
       keyId: process.env.RAZORPAY_KEY_ID,
+    },
+  };
+};
+
+// Verifies the payment signature returned by Razorpay Subscription Checkout. The subscription ID is looked up from our database instead of trusting the subscription ID supplied by the browser.
+
+export const verifyMentorshipSubscriptionPayment = async (
+  userId: string,
+  input: {
+    razorpaySubscriptionId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  },
+) => {
+  const subscription = await Subscription.findOne({
+    userId,
+    razorpaySubscriptionId: input.razorpaySubscriptionId,
+  });
+
+  if (!subscription) {
+    return {
+      success: false,
+      message: "Mentorship subscription not found",
+    };
+  }
+
+  const generatedSignature = crypto
+    .createHmac(
+      "sha256",
+      process.env.RAZORPAY_KEY_SECRET!,
+    )
+    .update(
+      `${input.razorpayPaymentId}|${subscription.razorpaySubscriptionId}`,
+    )
+    .digest("hex");
+
+  if (generatedSignature !== input.razorpaySignature) {
+    return {
+      success: false,
+      message: "Invalid subscription payment signature",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      verified: true,
+      razorpaySubscriptionId:
+        subscription.razorpaySubscriptionId,
     },
   };
 };

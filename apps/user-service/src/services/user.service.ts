@@ -53,12 +53,6 @@ interface UpdateMentorProfileInput {
 }
 
 // Data submitted by a mentor when configuring their marketplace profile
-interface UpdateMentorProfileInput {
-  mentorId: string;
-  monthlyMentorshipAmount: number;
-  mentorshipExpertise: string[];
-  mentorshipEnabled: boolean;
-}
 
 export const createUserProfile = async (data: CreateUserInput) => {
   const existingUser = await prisma.user.findUnique({
@@ -154,6 +148,34 @@ export const updateUserProfile = async (data: updateUserInput) => {
       location: user.location,
       headline: user.headline,
     });
+  }
+
+  if (user.role === "MENTOR") {
+    // Mentor marketplace data lives in the separate mentorProfile table.
+    const mentorProfile = await prisma.mentorProfile.findUnique({
+      where: {
+        mentorId: user.id,
+      },
+    });
+
+    if (mentorProfile?.mentorshipEnabled) {
+      // Re-index the mentor whenever their searchable profile fields change.
+      await indexMentor({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        headline: user.headline,
+        bio: user.bio,
+        location: user.location,
+        mentorshipExpertise: mentorProfile.mentorshipExpertise,
+        mentorshipEnabled: mentorProfile.mentorshipEnabled,
+      });
+    } else {
+      // Disabled mentors should not remain searchable in the marketplace.
+      await removeMentorFromIndex(user.id);
+    }
   }
 
   return user;
@@ -308,9 +330,7 @@ export const getMentorProfile = async (mentorId: string) => {
 
 // Returns mentors available in the marketplace. When a search query is provided, Elasticsearch performs the discovery.
 
-export const getMentorProfiles = async (
-  query?: string,
-) => {
+export const getMentorProfiles = async (query?: string) => {
   const normalizedQuery = query?.trim();
 
   // No search term means we return all currently enabled mentors
@@ -341,23 +361,60 @@ export const getMentorProfiles = async (
 
   // Elasticsearch handles mentor name, expertise, headline, bio, username, and location search.
 
-  const searchResults =
-    await searchMentors(normalizedQuery);
-
-  // Nothing matched the search.
+  const searchResults = await searchMentors(normalizedQuery);
 
   if (searchResults.length === 0) {
-    return [];
+    const fallbackMentors = await prisma.user.findMany({
+      where: {
+        role: "MENTOR",
+        deletedAt: null,
+        mentorProfile: {
+          is: {
+            mentorshipEnabled: true,
+          },
+        },
+
+        // Search the same profile fields supported by the marketplace
+
+        OR: [
+          { firstName: { contains: normalizedQuery, mode: "insensitive" } },
+          { lastName: { contains: normalizedQuery, mode: "insensitive" } },
+          { username: { contains: normalizedQuery, mode: "insensitive" } },
+          { headline: { contains: normalizedQuery, mode: "insensitive" } },
+          { bio: { contains: normalizedQuery, mode: "insensitive" } },
+          { location: { contains: normalizedQuery, mode: "insensitive" } },
+          {
+            mentorProfile: {
+              is: {
+                mentorshipEnabled: true,
+                mentorshipExpertise: {
+                  has: normalizedQuery,
+                },
+              },
+            },
+          },
+        ],
+      },
+
+      // Return the complete marketplace profile
+
+      include: {
+        mentorProfile: true,
+      },
+
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return fallbackMentors;
   }
 
   // Extract the mentor IDs returned by Elasticsearch.
 
-  const mentorIds = searchResults
-    .map((mentor) => mentor.id)
-    .filter(Boolean);
+  const mentorIds = searchResults.map((mentor) => mentor.id).filter(Boolean);
 
   // Fetch the current source of truth from PostgreSQL
-
 
   const mentors = await prisma.user.findMany({
     where: {
@@ -380,31 +437,20 @@ export const getMentorProfiles = async (
 
   // PostgreSQL does not guarantee the Elasticsearch ranking order, so restore the Elasticsearch order before returning the response.
 
-  const mentorMap = new Map(
-    mentors.map((mentor) => [
-      mentor.id,
-      mentor,
-    ]),
-  );
+  const mentorMap = new Map(mentors.map((mentor) => [mentor.id, mentor]));
 
   return mentorIds
     .map((mentorId) => mentorMap.get(mentorId))
     .filter(
-      (
-        mentor,
-      ): mentor is (typeof mentors)[number] =>
-        mentor !== undefined,
+      (mentor): mentor is (typeof mentors)[number] => mentor !== undefined,
     );
 };
 
 // Creates or updates the marketplace settings for the authenticated mentor
 
-export const updateMentorProfile = async (
-  data: UpdateMentorProfileInput,
-) => {
-
+export const updateMentorProfile = async (data: UpdateMentorProfileInput) => {
   // Verify that the authenticated user is actually a mentor.
-  
+
   const mentor = await prisma.user.findFirst({
     where: {
       id: data.mentorId,
@@ -420,18 +466,14 @@ export const updateMentorProfile = async (
   // The monthly price must be a positive integer because the payment service will eventually use this value in INR.
 
   if (
-    !Number.isInteger(
-      data.monthlyMentorshipAmount,
-    ) ||
+    !Number.isInteger(data.monthlyMentorshipAmount) ||
     data.monthlyMentorshipAmount <= 0
   ) {
-    throw new Error(
-      "Monthly mentorship amount must be a positive integer",
-    );
+    throw new Error("Monthly mentorship amount must be a positive integer");
   }
 
   // Remove empty expertise values before storing them.
-  
+
   const expertise = data.mentorshipExpertise
     .map((item) => item.trim())
     .filter(Boolean);
@@ -439,39 +481,32 @@ export const updateMentorProfile = async (
   // A mentor needs at least one expertise area to appear as a useful marketplace profile.
 
   if (expertise.length === 0) {
-    throw new Error(
-      "At least one mentorship expertise is required",
-    );
+    throw new Error("At least one mentorship expertise is required");
   }
 
   // Create the marketplace profile if it does not exist, otherwise update the existing profile.
 
-  const mentorProfile =
-    await prisma.mentorProfile.upsert({
-      where: {
-        mentorId: data.mentorId,
-      },
+  const mentorProfile = await prisma.mentorProfile.upsert({
+    where: {
+      mentorId: data.mentorId,
+    },
 
-      create: {
-        mentorId: data.mentorId,
-        monthlyMentorshipAmount:
-          data.monthlyMentorshipAmount,
-        mentorshipExpertise: expertise,
-        mentorshipEnabled:
-          data.mentorshipEnabled,
-      },
+    create: {
+      mentorId: data.mentorId,
+      monthlyMentorshipAmount: data.monthlyMentorshipAmount,
+      mentorshipExpertise: expertise,
+      mentorshipEnabled: data.mentorshipEnabled,
+    },
 
-      update: {
-        monthlyMentorshipAmount:
-          data.monthlyMentorshipAmount,
-        mentorshipExpertise: expertise,
-        mentorshipEnabled:
-          data.mentorshipEnabled,
-      },
-    });
+    update: {
+      monthlyMentorshipAmount: data.monthlyMentorshipAmount,
+      mentorshipExpertise: expertise,
+      mentorshipEnabled: data.mentorshipEnabled,
+    },
+  });
 
   // Keep Elasticsearch synchronized with the latest mentor data.
-  
+
   await indexMentor({
     id: mentor.id,
     email: mentor.email,
@@ -482,23 +517,19 @@ export const updateMentorProfile = async (
     bio: mentor.bio,
     location: mentor.location,
     mentorshipExpertise: expertise,
-    mentorshipEnabled:
-      data.mentorshipEnabled,
+    mentorshipEnabled: data.mentorshipEnabled,
   });
 
   // Return the saved marketplace profile.
-  
+
   return mentorProfile;
 };
 
 // Returns the marketplace settings belonging to the authenticated mentor.
 
-export const getMyMentorProfile = async (
-  mentorId: string,
-) => {
-
+export const getMyMentorProfile = async (mentorId: string) => {
   // Verify that the authenticated user is a mentor.
-  
+
   const mentor = await prisma.user.findFirst({
     where: {
       id: mentorId,
@@ -512,15 +543,13 @@ export const getMyMentorProfile = async (
   }
 
   // Fetch the separate marketplace configuration.
-  
+
   return prisma.mentorProfile.findUnique({
     where: {
       mentorId,
     },
   });
 };
-
-
 
 // checks the Payment service before allowing a candidate to review a mentor they have paid for
 

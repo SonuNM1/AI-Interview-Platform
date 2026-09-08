@@ -9,8 +9,11 @@ interface CandidateTopbarProps {
   onNavigate: (path: string) => void;
 }
 
-export function CandidateTopbar({ onNavigate }: CandidateTopbarProps) {
-  const [showNotifications, setShowNotifications] = useState(false);
+export function CandidateTopbar({
+  onNavigate,
+}: CandidateTopbarProps) {
+  const [showNotifications, setShowNotifications] =
+    useState(false);
 
   const { data } = useQuery({
     queryKey: ["candidate-notifications"],
@@ -26,84 +29,122 @@ export function CandidateTopbar({ onNavigate }: CandidateTopbarProps) {
   return (
     <header
       className="
-        sticky top-0 z-20
-        flex h-16
-        items-center justify-between
-        border-b border-[#2F2B27]
-        bg-[#181715]/95
+        sticky
+        top-0
+        z-20
+        flex
+        h-[72px]
+        items-center
+        justify-between
+        border-b border-slate-200
+        bg-white/90
         px-4
-        backdrop-blur
+        backdrop-blur-xl
         sm:px-6
+        lg:px-8
       "
     >
-      <div className="ml-auto flex items-center gap-1">
+      {/* Keep the right-side actions exactly as before. */}
+      <div className="ml-auto flex items-center gap-2">
 
-        {/* Notification bell with upcoming interview popover */}
-        
+        {/* =======================================================
+            NOTIFICATIONS
+        ======================================================= */}
         <div className="relative">
           <button
             type="button"
-            onClick={() => setShowNotifications((previous) => !previous)}
+            onClick={() =>
+              setShowNotifications(
+                (previous) => !previous,
+              )
+            }
             aria-label="Notifications"
             className="
-        relative
-        flex h-10 w-10
-        items-center justify-center
-        rounded-lg
-        text-[#8F887F]
-        transition-colors
-        hover:bg-[#24211E]
-        hover:text-[#F2EDE4]
-        cursor-pointer
-      "
+              relative
+              flex
+              h-10
+              w-10
+              cursor-pointer
+              items-center
+              justify-center
+              rounded-xl
+              text-slate-400
+              transition-all
+              hover:bg-violet-50
+              hover:text-violet-600
+            "
           >
-            <Bell className="h-[19px] w-[19px]" strokeWidth={1.8} />
+            <Bell
+              className="h-[19px] w-[19px]"
+              strokeWidth={1.8}
+            />
+
             {unreadCount > 0 && (
               <span
                 className="
-      absolute
-      right-[7px]
-      top-[6px]
-      flex
-      h-4
-      min-w-4
-      items-center
-      justify-center
-      rounded-full
-      bg-[#D98260]
-      px-1
-      text-[9px]
-      font-semibold
-      text-white
-    "
+                  absolute
+                  right-[6px]
+                  top-[5px]
+                  flex
+                  h-4
+                  min-w-4
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-violet-600
+                  px-1
+                  text-[9px]
+                  font-bold
+                  text-white
+                  ring-2
+                  ring-white
+                "
               >
-                {unreadCount > 9 ? "9+" : unreadCount}
+                {unreadCount > 9
+                  ? "9+"
+                  : unreadCount}
               </span>
             )}
           </button>
 
           {showNotifications && (
-            <CandidateNotificationPopover onNavigate={onNavigate} />
+            <CandidateNotificationPopover
+              onNavigate={onNavigate}
+            />
           )}
         </div>
 
-        {/* Candidate profile */}
+        {/* =======================================================
+            CANDIDATE PROFILE
+        ======================================================= */}
         <button
           type="button"
-          onClick={() => onNavigate("/candidate/profile")}
+          onClick={() =>
+            onNavigate("/candidate/profile")
+          }
           aria-label="Open profile"
           className="
-      flex h-10 w-10
-      items-center justify-center
-      rounded-lg
-      text-[#8F887F]
-      transition-colors
-      hover:bg-[#24211E]
-      hover:text-[#F2EDE4]
-      cursor-pointer
-    "
+            flex
+            h-10
+            w-10
+            cursor-pointer
+            items-center
+            justify-center
+            rounded-xl
+            border border-slate-200
+            bg-white
+            text-slate-400
+            shadow-sm
+            transition-all
+            hover:border-violet-200
+            hover:bg-violet-50
+            hover:text-violet-600
+          "
         >
-          <User className="h-[20px] w-[20px]" strokeWidth={1.8} />
+          <User
+            className="h-[20px] w-[20px]"
+            strokeWidth={1.8}
+          />
         </button>
       </div>
     </header>

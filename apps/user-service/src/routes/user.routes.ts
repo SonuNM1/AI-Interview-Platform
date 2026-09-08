@@ -33,20 +33,14 @@ router.patch(
   uploadResumeController,
 );
 
+// candidate search route 
+
 router.get("/candidates/search", searchCandidates)
 
-router.get("/:id", getUser);
-
-router.patch("/:id", updateUser);
-
-router.delete("/delete-user/:id", deleteUserController);
-
-// mentor discovery 
+// mentor marketplace routes must come before the generic "/:id" route 
 
 router.get("/mentors", getMentors) ; 
-
 router.get("/mentors/me", getMyMentor);
-
 router.patch("/mentors/me", updateMyMentor);
 
 // single mentor profile 
@@ -60,5 +54,11 @@ router.get("/mentors/:id/ratings", getMentorRatingList) ;
 // candidate creates/updates a mentor rating 
 
 router.post("/mentors/:id/ratings", rateMentor) ; 
+
+router.get("/:id", getUser);
+
+router.patch("/:id", updateUser);
+
+router.delete("/delete-user/:id", deleteUserController);
 
 export default router; 

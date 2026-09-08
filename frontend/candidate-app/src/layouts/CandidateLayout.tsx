@@ -10,27 +10,32 @@ interface CandidateLayoutProps {
 export function CandidateLayout({
   children,
 }: CandidateLayoutProps) {
-
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const location = useLocation() ; 
+  const location = useLocation();
 
-  // InterviewRoom is a focused experience. We don't want the normal candidate sidebar/topbar visible while the candidate is taking an interview 
+  // InterviewRoom is a focused experience.
+  // Keep its existing dark experience unchanged.
+  const isInterviewRoom = location.pathname.includes(
+    "/candidate/interview/",
+  );
 
-  const isInterviewRoom = location.pathname.includes("/candidate/interview/") ; 
-
-  // Interview room gets the entire viewport 
-
-  if(isInterviewRoom) {
+  // Interview room gets the entire viewport.
+  if (isInterviewRoom) {
     return (
       <div className="h-screen overflow-hidden bg-[#0E1117]">
         {children}
       </div>
-    )
+    );
   }
 
-  /* Candidate MFE does not own the Router. The Shell owns navigation. Dispatching this event lets the Shell navigate without requiring react-router-dom inside the MFE */
-  
+  /*
+   * Candidate MFE does not own the Router.
+   * The Shell owns navigation.
+   *
+   * Dispatching this event lets the Shell navigate without
+   * requiring react-router-dom navigation ownership inside the MFE.
+   */
   const handleNavigate = (path: string) => {
     window.dispatchEvent(
       new CustomEvent("shell:navigate", {
@@ -39,18 +44,17 @@ export function CandidateLayout({
     );
   };
 
-  // InterviewRoom gets the entire viewport. No candidate sidebar, topbar or normal page loading
-
-  if(isInterviewRoom) {
+  // Keep the existing interview-room fallback unchanged.
+  if (isInterviewRoom) {
     return (
       <div className="min-h-screen bg-[#0E1117] text-[#F2F4F7]">
         {children}
       </div>
-    )
+    );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#151412] text-[#F2EDE4]">
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <CandidateSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -63,6 +67,8 @@ export function CandidateLayout({
           onNavigate={handleNavigate}
         />
 
+        {/* Main Candidate workspace */}
+        
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {children}
         </main>

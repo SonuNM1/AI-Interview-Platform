@@ -61,3 +61,20 @@ export const createMentorshipSubscription = async (
 
   return response.data;
 };
+
+// verifies the razorpay subscription checkout response on the server 
+
+export const verifyMentorshipSubscriptionPayment = async (
+  data: {
+    razorpaySubscriptionId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }
+) => {
+  const response = await api.post(
+    "/payments/subscription/mentorship/verify", 
+    data 
+  ) ; 
+
+  return response.data ; 
+}

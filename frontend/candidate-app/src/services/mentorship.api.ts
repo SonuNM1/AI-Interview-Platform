@@ -31,6 +31,19 @@ export interface Mentor extends MentorProfile {
   mentorProfile: MentorMarketplaceProfile | null;
 }
 
+// Mentor rating summary and individual reviews.
+export interface MentorRatings {
+  averageRating: number;
+  totalRatings: number;
+  ratings: {
+    id: string;
+    candidateId: string;
+    rating: number;
+    review: string | null;
+    createdAt: string;
+  }[];
+}
+
 // get mentors available for mentorship 
 
 export const getMentors = async (
@@ -53,4 +66,24 @@ export const getMentor = async (
     const response = await api.get(`/users/mentors/${mentorId}`) ; 
 
     return response.data.data ; 
+}
+
+// get ratings and reviews for a mentor 
+
+export const getMentorRatings = async (
+  mentorId: string 
+): Promise<MentorRatings> => {
+  const response = await api.get(`/users/mentors/${mentorId}/ratings`) ; 
+
+  return response.data.data ; 
+}
+
+// get a temporary signed URL for a private mentor avatar 
+
+export const getMentorAvatarUrl = async (
+  fileId: string 
+): Promise<string> => {
+  const response = await api.get(`/files/signed-url/${fileId}`) ; 
+
+  return response.data.data.url ; 
 }

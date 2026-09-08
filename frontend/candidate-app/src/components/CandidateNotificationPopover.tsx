@@ -1,10 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FiCalendar, FiCheckCircle, FiClock, FiRefreshCw, FiXCircle } from "react-icons/fi";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  FiCalendar,
+  FiCheckCircle,
+  FiClock,
+  FiRefreshCw,
+  FiXCircle,
+} from "react-icons/fi";
 import {
   getNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
-  type CandidateNotification
+  type CandidateNotification,
 } from "../services/notification.api";
 
 interface CandidateNotificationPopoverProps {
@@ -20,23 +30,34 @@ function formatInterviewTime(scheduledAt?: string) {
   });
 }
 
-function getNotificationIcon(type: CandidateNotification["type"]) {
-
+function getNotificationIcon(
+  type: CandidateNotification["type"],
+) {
   switch (type) {
     case "INTERVIEW_SCHEDULED":
-      return <FiCalendar className="h-4 w-4 text-[#D98260]" />;
+      return (
+        <FiCalendar className="h-4 w-4 text-violet-600" />
+      );
 
     case "INTERVIEW_RESCHEDULED":
-      return <FiRefreshCw className="h-4 w-4 text-[#D98260]" />;
+      return (
+        <FiRefreshCw className="h-4 w-4 text-violet-600" />
+      );
 
     case "INTERVIEW_UPDATED":
-      return <FiClock className="h-4 w-4 text-[#D98260]" />;
+      return (
+        <FiClock className="h-4 w-4 text-violet-600" />
+      );
 
     case "INTERVIEW_CANCELLED":
-      return <FiXCircle className="h-4 w-4 text-red-400" />;
+      return (
+        <FiXCircle className="h-4 w-4 text-red-500" />
+      );
 
     default:
-      return <FiCheckCircle className="h-4 w-4 text-[#D98260]" />;
+      return (
+        <FiCheckCircle className="h-4 w-4 text-violet-600" />
+      );
   }
 }
 
@@ -45,15 +66,16 @@ export function CandidateNotificationPopover({
 }: CandidateNotificationPopoverProps) {
   const queryClient = useQueryClient();
 
-  const { data, isLoading} = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["candidate-notifications"],
     queryFn: getNotifications,
   });
 
-  const notifications = data?.data ?? [] ; 
+  const notifications = data?.data ?? [];
 
   const markReadMutation = useMutation({
     mutationFn: markNotificationAsRead,
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["candidate-notifications"],
@@ -63,6 +85,7 @@ export function CandidateNotificationPopover({
 
   const markAllReadMutation = useMutation({
     mutationFn: markAllNotificationsAsRead,
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["candidate-notifications"],
@@ -74,7 +97,9 @@ export function CandidateNotificationPopover({
     (notification) => !notification.isRead,
   ).length;
 
-  const handleNotificationClick = (notification: CandidateNotification) => {
+  const handleNotificationClick = (
+    notification: CandidateNotification,
+  ) => {
     if (!notification.isRead) {
       markReadMutation.mutate(notification._id);
     }
@@ -85,18 +110,42 @@ export function CandidateNotificationPopover({
   };
 
   return (
-    <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-[380px] overflow-hidden rounded-2xl border border-[#2F2B27] bg-[#181715] shadow-2xl">
-
-      {/* Header */}
-      
-      <div className="flex items-center justify-between gap-3 border-b border-[#2F2B27] px-4 py-3">
+    <div
+      className="
+        absolute
+        right-0
+        top-12
+        z-50
+        w-[calc(100vw-2rem)]
+        max-w-[390px]
+        overflow-hidden
+        rounded-2xl
+        border border-slate-200
+        bg-white
+        shadow-[0_20px_50px_rgba(15,23,42,0.12)]
+      "
+    >
+      {/* =========================================================
+          HEADER
+      ========================================================= */}
+      <div
+        className="
+          flex
+          items-center
+          justify-between
+          gap-3
+          border-b border-slate-100
+          px-5
+          py-4
+        "
+      >
         <div>
-          <h2 className="text-sm font-semibold text-[#F2EDE4]">
+          <h2 className="text-sm font-bold text-slate-900">
             Notifications
           </h2>
 
           {unreadCount > 0 && (
-            <p className="mt-0.5 text-xs text-[#8F887F]">
+            <p className="mt-1 text-xs text-slate-400">
               {unreadCount} unread
             </p>
           )}
@@ -105,27 +154,60 @@ export function CandidateNotificationPopover({
         {unreadCount > 0 && (
           <button
             type="button"
-            onClick={() => markAllReadMutation.mutate()}
+            onClick={() =>
+              markAllReadMutation.mutate()
+            }
             disabled={markAllReadMutation.isPending}
-            className="cursor-pointer text-xs font-medium text-[#D98260] hover:text-[#C96F4F] disabled:opacity-50"
+            className="
+              cursor-pointer
+              rounded-lg
+              px-2
+              py-1
+              text-xs
+              font-semibold
+              text-violet-600
+              transition
+              hover:bg-violet-50
+              hover:text-violet-700
+              disabled:opacity-50
+            "
           >
             Mark all read
           </button>
         )}
       </div>
 
-      {/* Content */}
+      {/* =========================================================
+          CONTENT
+      ========================================================= */}
       {isLoading ? (
-        <div className="px-4 py-8 text-center text-sm text-[#8F887F]">
+        <div className="px-5 py-10 text-center text-sm text-slate-400">
           Loading notifications...
         </div>
       ) : notifications.length === 0 ? (
-        <div className="px-4 py-8 text-center">
-          <p className="text-sm text-[#F2EDE4]">
+        <div className="px-5 py-10 text-center">
+          <div
+            className="
+              mx-auto
+              flex
+              h-12
+              w-12
+              items-center
+              justify-center
+              rounded-2xl
+              bg-gradient-to-br
+              from-violet-100
+              to-indigo-100
+            "
+          >
+            <FiCheckCircle className="h-5 w-5 text-violet-600" />
+          </div>
+
+          <p className="mt-4 text-sm font-semibold text-slate-700">
             No notifications
           </p>
 
-          <p className="mt-1 text-xs text-[#8F887F]">
+          <p className="mt-1 text-xs text-slate-400">
             You're all caught up.
           </p>
         </div>
@@ -135,45 +217,80 @@ export function CandidateNotificationPopover({
             <button
               key={notification._id}
               type="button"
-              onClick={() => handleNotificationClick(notification)}
-              className={`w-full border-b border-[#2F2B27] px-4 py-4 text-left transition hover:bg-[#24211E] ${
-                !notification.isRead ? "bg-[#211E1B]" : ""
-              }`}
+              onClick={() =>
+                handleNotificationClick(notification)
+              }
+              className={`
+                w-full
+                border-b
+                border-slate-100
+                px-5
+                py-4
+                text-left
+                transition
+                hover:bg-slate-50
+
+                ${
+                  !notification.isRead
+                    ? "bg-violet-50/50"
+                    : "bg-white"
+                }
+              `}
             >
               <div className="flex gap-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D98260]/10">
-                  {getNotificationIcon(notification.type)}
+                {/* Notification icon */}
+                <div
+                  className="
+                    mt-0.5
+                    flex
+                    h-9
+                    w-9
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-gradient-to-br
+                    from-violet-100
+                    to-indigo-100
+                  "
+                >
+                  {getNotificationIcon(
+                    notification.type,
+                  )}
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-medium text-[#D98260]">
+                    <p className="text-xs font-semibold text-violet-600">
                       {notification.title}
                     </p>
 
                     {!notification.isRead && (
-                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#D98260]" />
+                      <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-violet-600" />
                     )}
                   </div>
 
-                  <p className="mt-1 break-words text-sm font-semibold leading-5 text-[#F2EDE4]">
+                  <p className="mt-1 break-words text-sm font-semibold leading-5 text-slate-800">
                     {notification.message}
                   </p>
 
                   {notification.metadata?.scheduledAt && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-[#A9A29A]">
+                    <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
                       <FiClock className="h-3.5 w-3.5" />
 
                       <span>
                         {formatInterviewTime(
-                          notification.metadata.scheduledAt,
+                          notification.metadata
+                            .scheduledAt,
                         )}
                       </span>
                     </div>
                   )}
 
-                  <p className="mt-2 text-xs text-[#6F6962]">
-                    {new Date(notification.createdAt).toLocaleString([], {
+                  <p className="mt-2 text-xs text-slate-400">
+                    {new Date(
+                      notification.createdAt,
+                    ).toLocaleString([], {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}

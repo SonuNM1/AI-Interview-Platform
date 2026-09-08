@@ -22,8 +22,7 @@ export interface MentorUserProfile {
   headline: string | null;
 }
 
-export const getMyMentorProfile =
-  async (): Promise<MentorProfileSettings | null> => {
+export const getMyMentorProfile = async (): Promise<MentorProfileSettings | null> => {
     const response = await api.get("/users/mentors/me");
 
     return response.data.data;
@@ -64,7 +63,9 @@ export const updateMyProfile = async (
     linkedin?: string;
   },
 ): Promise<MentorUserProfile> => {
-  const response = await api.patch("/users/me", data);
+  const currentProfile = await getMyProfile() ; 
+
+  const response = await api.patch(`/users/${currentProfile.id}`, data) ; 
 
   return response.data.data;
 };
@@ -83,3 +84,13 @@ export const updateMyAvatar = async (
 
   return response.data.data;
 };
+
+// Get a temporary signed URL so the browser can display a private avatar stored through the File Service 
+
+export const getFileSignedUrl = async (
+  fileId: string  
+): Promise<string> => {
+  const response = await api.get(`/files/signed-url/${fileId}`) ; 
+
+  return response.data.data.url ; 
+}

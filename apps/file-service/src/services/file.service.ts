@@ -8,7 +8,7 @@ import { deleteFileFromS3, generateSignedUrl, uploadFileToS3 } from "../helpers/
 export const uploadFile = async (
     file: Express.Multer.File, 
     uploadedBy: string, 
-    isPublic: boolean = false 
+    isPublic: boolean = true 
 ) => {
 
     const extension = path.extname(file.originalname) ; // extracting the file extension from the original filename 
@@ -51,7 +51,7 @@ export const uploadFile = async (
         etag: uploadedFile.etag,
 
         uploadedBy,
-        isPublic,
+        isPublic: true // all uploaded files are publically viewable through signed URLs 
     }) ;
     return savedFile ; 
 }

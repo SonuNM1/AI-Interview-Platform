@@ -1,18 +1,23 @@
-import { Camera, LogOut, Mail, MapPin, Phone, Save, User } from "lucide-react";
+import { Camera, LogOut, Mail, MapPin, Phone, Save } from "lucide-react";
 import { toast } from "sonner";
 import { FaGithub, FaLinkedin } from "react-icons/fa";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   getMyProfile,
+  getFileSignedUrl,
   updateMyAvatar,
   updateMyProfile,
   type MentorUserProfile,
 } from "../services/mentor.api";
 
 export default function Profile() {
+
   const [profile, setProfile] = useState<MentorUserProfile | null>(null);
 
   const [loading, setLoading] = useState(true);
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null) ; // temporary signed URL used to display the private avatar stored in the File Service/S3
+
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -34,6 +39,21 @@ export default function Profile() {
         const data = await getMyProfile();
 
         setProfile(data);
+
+        // if an avatar exists, ask the File Service for a temporary signed URL so the browser can display the private image 
+
+        if(data.avatarFileId) {
+          try {
+
+            const signedUrl = await getFileSignedUrl(data.avatarFileId) ; 
+
+            setAvatarUrl(signedUrl) ; 
+          } catch (error) {
+            console.error("Failed to load profile avatar: ", error) ; 
+
+            toast.error("Unable to load your profile picture.") ; 
+          } 
+        }
 
         setForm({
           username: data.username ?? "",
@@ -129,6 +149,16 @@ export default function Profile() {
 
       setProfile(updatedProfile);
 
+      // fetch a fresh signed URL for the newly uploaded private avatar 
+
+      if (updatedProfile.avatarFileId) {
+        const signedUrl = await getFileSignedUrl(updatedProfile.avatarFileId)
+
+        setAvatarUrl(signedUrl) ;
+      } else {
+        setAvatarUrl(null) ; // clear the displayed avatar if the backend no longer has oe 
+      }
+
       // replace loading state with success feedback 
 
       toast.success("Profile photo updated successfully.", {
@@ -150,7 +180,15 @@ export default function Profile() {
   };
 
   const handleLogout = async () => {
-    await window.__AUTH_BRIDGE__?.logout();
+    try {
+      await window.__AUTH_BRIDGE__?.logout(); // ask the shell to clear the authenticated session 
+
+      toast.success("Logged out successfully.") ; // let the mentor know logout was triggered successfully 
+    } catch (error) {
+      console.error("Failed to logout: ", error) ; 
+      
+      toast.error("Failed to logout. Please try again.")
+    }
   };
 
   if (loading) {
@@ -200,13 +238,17 @@ export default function Profile() {
           {/* Avatar */}
           <div className="relative shrink-0">
             <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-white/30 bg-white text-3xl font-bold text-violet-600 shadow-xl">
-              {profile.avatarFileId ? (
-                <div className="flex h-full w-full items-center justify-center bg-violet-100">
-                  <User size={42} />
-                </div>
-              ) : (
-                initials
-              )}
+            {avatarUrl ? (
+              // displaying the temporary signed S3 URL returned by the file service 
+
+              <img
+                src={avatarUrl}
+                alt="Profile"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              initials
+            )}
             </div>
 
             <label className="absolute bottom-0 right-0 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-slate-900 text-white shadow-lg transition hover:scale-105">
