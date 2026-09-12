@@ -10,9 +10,12 @@ const chatProxy = createProxyMiddleware({
   target: services.chat,
   changeOrigin: true,
   pathRewrite: (path) => `/api/v1${path}`,
+  proxyTimeout: 15000,
+  timeout: 20000,
 });
 
 // Conversations
+
 router.post(
   "/conversations",
   authenticate,
@@ -67,6 +70,13 @@ router.delete(
 
 router.post(
   "/attachments/upload",
+  authenticate,
+  authorize("CANDIDATE", "RECRUITER", "MENTOR", "ADMIN"),
+  chatProxy,
+);
+
+router.get(
+  "/attachments/signed-url/:fileId",
   authenticate,
   authorize("CANDIDATE", "RECRUITER", "MENTOR", "ADMIN"),
   chatProxy,

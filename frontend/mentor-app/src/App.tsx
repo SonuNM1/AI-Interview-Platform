@@ -6,7 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import MentorshipSettings from "./pages/MentorshipSettings";
 import Profile from "./pages/Profile";
 import { Toaster } from "sonner";
-import Chats from "./pages/Chats";
+import Chats from "./pages/Chat";
 
 export default function App() {
   return (

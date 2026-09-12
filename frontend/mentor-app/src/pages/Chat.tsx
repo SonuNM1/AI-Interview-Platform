@@ -1,114 +1,118 @@
-import {
-  MessageCircle,
-  Search,
-  Send,
-} from "lucide-react";
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import api from "../services/api";
 import {
-  getConversationMessages,
   getConversations,
+  getConversationMessages,
   type ChatMessage,
+  type ChatUser,
   type Conversation,
 } from "../services/chat.api";
+import { getFileSignedUrl } from "../services/mentor.api";
+import { ConversationList } from "../components/Chat/ConversationList";
+import { ChatWindow } from "../components/Chat/ChatWindow";
 
-import {
-  createChatSocket,
-  SOCKET_EVENTS,
-} from "../services/chat.socket";
+export default function Chat() {
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
 
-export default function Chats() {
-  const [conversations, setConversations] =
-    useState<Conversation[]>([]);
+  const [candidates, setCandidates] = useState<Record<string, ChatUser>>({});
+
+  const [candidateAvatarUrls, setCandidateAvatarUrls] = useState<
+    Record<string, string>
+  >({});
 
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
-
-  const [messages, setMessages] =
-    useState<ChatMessage[]>([]);
-
-  const [messageText, setMessageText] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const socketRef = useRef<
-    Awaited<ReturnType<typeof createChatSocket>> | null
-  >(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
+    const loadChats = async () => {
       try {
-        const data = await getConversations();
+        const [userResponse, conversationData] = await Promise.all([
+          api.get("/users/me"),
+          getConversations(),
+        ]);
 
-        setConversations(
-          data.filter(
-            (conversation) =>
-              conversation.type === "MENTORSHIP",
+        const user = userResponse.data.data;
+
+        setCurrentUserId(user.id);
+        setConversations(conversationData);
+
+        const candidateIds = [
+          ...new Set(
+            conversationData.flatMap(
+              (conversation) => conversation.participants,
+            ),
           ),
-        );
-      } catch (error) {
-        console.error(
-          "Failed to load mentor chats:",
-          error,
+        ].filter((id) => id !== user.id);
+
+        const candidateResults = await Promise.all(
+          candidateIds.map(async (id) => {
+            try {
+              const response = await api.get(`/users/${id}`);
+              return response.data.data as ChatUser;
+            } catch {
+              return null;
+            }
+          }),
         );
 
-        toast.error(
-          "Unable to load your conversations.",
+        const candidateMap: Record<string, ChatUser> = {};
+
+        candidateIds.forEach((id, index) => {
+          const candidate = candidateResults[index];
+
+          if (candidate) {
+            candidateMap[id] = candidate;
+          }
+        });
+
+        setCandidates(candidateMap);
+
+        // Convert private avatar file IDs into temporary signed URLs for chat UI.
+        const avatarEntries = await Promise.all(
+          Object.entries(candidateMap).map(async ([id, candidate]) => {
+            if (!candidate.avatarFileId) {
+              return null;
+            }
+
+            try {
+              const url = await getFileSignedUrl(candidate.avatarFileId);
+
+              return [id, url] as const;
+            } catch (error) {
+              console.error(
+                `Failed to load candidate avatar for ${id}:`,
+                error,
+              );
+              return null;
+            }
+          }),
         );
+
+        const avatarMap: Record<string, string> = {};
+
+        avatarEntries.forEach((entry) => {
+          if (entry) {
+            avatarMap[entry[0]] = entry[1];
+          }
+        });
+
+        setCandidateAvatarUrls(avatarMap);
+
+        setSelectedConversation(conversationData[0] ?? null);
+      } catch (error) {
+        console.error("Load mentor chats error:", error);
+        toast.error("Unable to load your mentor chats.");
       } finally {
         setLoading(false);
       }
     };
 
-    void load();
-  }, []);
-
-  useEffect(() => {
-    const connect = async () => {
-      try {
-        const socket =
-          await createChatSocket();
-
-        socketRef.current = socket;
-
-        socket.on(
-          SOCKET_EVENTS.RECEIVE_MESSAGE,
-          (message: ChatMessage) => {
-            setMessages((current) => {
-              if (
-                current.some(
-                  (item) =>
-                    item._id === message._id,
-                )
-              ) {
-                return current;
-              }
-
-              return [...current, message];
-            });
-          },
-        );
-      } catch (error) {
-        console.error(
-          "Mentor chat socket error:",
-          error,
-        );
-      }
-    };
-
-    void connect();
-
-    return () => {
-      socketRef.current?.disconnect();
-      socketRef.current = null;
-    };
+    loadChats();
   }, []);
 
   useEffect(() => {
@@ -118,231 +122,72 @@ export default function Chats() {
 
     const loadMessages = async () => {
       try {
-        const data =
-          await getConversationMessages(
-            selectedConversation._id,
-          );
+        const data = await getConversationMessages(selectedConversation._id);
 
         setMessages(data);
-
-        socketRef.current?.emit(
-          SOCKET_EVENTS.JOIN_CONVERSATION,
-          selectedConversation._id,
-        );
       } catch (error) {
-        console.error(
-          "Failed to load chat messages:",
-          error,
-        );
+        console.error("Load chat messages error:", error);
+        toast.error("Unable to load messages.");
       }
     };
 
-    void loadMessages();
+    loadMessages();
   }, [selectedConversation]);
 
-  const sendMessage = () => {
-    const text = messageText.trim();
-
-    if (!text || !selectedConversation) {
-      return;
+  const selectedCandidate = useMemo(() => {
+    if (!selectedConversation) {
+      return null;
     }
 
-    socketRef.current?.emit(
-      SOCKET_EVENTS.SEND_MESSAGE,
-      {
-        conversationId:
-          selectedConversation._id,
-        text,
-        attachments: [],
-      },
+    const candidateId = selectedConversation.participants.find(
+      (id) => id !== currentUserId && candidates[id],
     );
 
-    setMessageText("");
-  };
+    return candidateId ? candidates[candidateId] : null;
+  }, [selectedConversation, candidates, currentUserId]);
+
+  const selectedCandidateAvatarUrl = selectedCandidate
+    ? candidateAvatarUrls[selectedCandidate.id]
+    : undefined;
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[620px] items-center justify-center">
+        <p className="text-sm text-slate-500">Loading conversations...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-8">
-        <p className="text-sm font-medium text-violet-600">
-          Mentorship
-        </p>
-
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
-          Chats
-        </h1>
-
-        <p className="mt-2 text-sm text-slate-500">
-          Chat with candidates who have subscribed to
-          your mentorship.
-        </p>
-      </div>
-
+    <div className="min-h-full">
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid min-h-[650px] lg:grid-cols-[320px_1fr]">
-          {/* Candidate list */}
-          <aside className="border-b border-slate-200 lg:border-b-0 lg:border-r">
-            <div className="border-b border-slate-100 p-5">
-              <div className="relative">
-                <Search
-                  size={16}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                />
+        <div className="flex h-[calc(100vh-120px)] min-h-0 flex-col lg:flex-row">
+          <ConversationList
+            conversations={conversations}
+            candidates={candidates}
+            candidateAvatarUrls={candidateAvatarUrls}
+            selectedConversationId={selectedConversation?._id ?? null}
+            onSelect={(conversation) => {
+              setSelectedConversation(conversation);
 
-                <input
-                  placeholder="Search candidates..."
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
-                />
-              </div>
-            </div>
+              setConversations((current) =>
+                current.map((item) =>
+                  item._id === conversation._id
+                    ? { ...item, unreadCount: 0 }
+                    : item,
+                ),
+              );
+            }}
+          />
 
-            {loading ? (
-              <div className="flex h-[560px] items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-100 border-t-violet-600" />
-              </div>
-            ) : conversations.length === 0 ? (
-              <div className="flex h-[560px] items-center justify-center px-6 text-center">
-                <div>
-                  <MessageCircle className="mx-auto text-violet-500" />
-
-                  <p className="mt-3 text-sm font-semibold text-slate-800">
-                    No mentorship chats yet
-                  </p>
-
-                  <p className="mt-2 text-xs leading-5 text-slate-400">
-                    New candidates will appear here after
-                    purchasing your mentorship.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="max-h-[560px] overflow-y-auto">
-                {conversations.map(
-                  (conversation) => (
-                    <button
-                      key={conversation._id}
-                      type="button"
-                      onClick={() =>
-                        setSelectedConversation(
-                          conversation,
-                        )
-                      }
-                      className={[
-                        "flex w-full cursor-pointer items-center gap-3 border-b border-slate-100 px-5 py-4 text-left transition",
-                        selectedConversation?._id ===
-                        conversation._id
-                          ? "bg-violet-50"
-                          : "hover:bg-slate-50",
-                      ].join(" ")}
-                    >
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-100 font-semibold text-violet-700">
-                        C
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          Candidate
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-400">
-                          Mentorship subscriber
-                        </p>
-                      </div>
-                    </button>
-                  ),
-                )}
-              </div>
-            )}
-          </aside>
-
-          {/* Chat */}
-          <main className="flex min-h-[650px] flex-col">
-            {!selectedConversation ? (
-              <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-violet-50/50 via-white to-indigo-50/50 text-center">
-                <div>
-                  <MessageCircle className="mx-auto text-violet-500" />
-
-                  <h2 className="mt-4 text-xl font-bold text-slate-900">
-                    Your mentorship chats
-                  </h2>
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Select a candidate to start chatting.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <header className="flex items-center gap-3 border-b border-slate-100 px-6 py-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-100 font-semibold text-violet-700">
-                    C
-                  </div>
-
-                  <div>
-                    <p className="font-semibold text-slate-900">
-                      Candidate
-                    </p>
-
-                    <p className="text-xs text-emerald-600">
-                      Mentorship active
-                    </p>
-                  </div>
-                </header>
-
-                <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50/50 p-6">
-                  {messages.map((message) => (
-                    <div
-                      key={message._id}
-                      className={`flex ${
-                        message.senderId ===
-                        selectedConversation.participants[0]
-                          ? "justify-start"
-                          : "justify-end"
-                      }`}
-                    >
-                      <div className="max-w-[75%] rounded-2xl bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm ring-1 ring-slate-100">
-                        {message.deleted
-                          ? "This message was deleted."
-                          : message.text}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t border-slate-100 p-4">
-                  <div className="flex items-end gap-3">
-                    <textarea
-                      value={messageText}
-                      onChange={(event) =>
-                        setMessageText(
-                          event.target.value,
-                        )
-                      }
-                      onKeyDown={(event) => {
-                        if (
-                          event.key === "Enter" &&
-                          !event.shiftKey
-                        ) {
-                          event.preventDefault();
-                          sendMessage();
-                        }
-                      }}
-                      rows={1}
-                      placeholder="Type a message..."
-                      className="min-h-11 flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-violet-300 focus:bg-white focus:ring-4 focus:ring-violet-100"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={sendMessage}
-                      className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl bg-violet-600 text-white transition hover:bg-violet-700"
-                    >
-                      <Send size={17} />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </main>
+          <ChatWindow
+            conversationId={selectedConversation?._id ?? null}
+            candidate={selectedCandidate}
+            candidateAvatarUrl={selectedCandidateAvatarUrl}
+            currentUserId={currentUserId}
+            messages={messages}
+            setMessages={setMessages}
+          />
         </div>
       </div>
     </div>

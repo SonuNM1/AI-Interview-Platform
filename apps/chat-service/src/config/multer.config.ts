@@ -1,6 +1,7 @@
 import multer from "multer";
 
-// Store uploaded files in memory before forwarding to File Service.
+// Store uploaded files in memory before forwarding to File Service
+
 const storage = multer.memoryStorage();
 
 const upload = multer({

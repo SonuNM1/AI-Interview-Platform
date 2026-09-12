@@ -51,7 +51,7 @@ export const uploadFile = async (
         etag: uploadedFile.etag,
 
         uploadedBy,
-        isPublic: true // all uploaded files are publically viewable through signed URLs 
+        isPublic
     }) ;
     return savedFile ; 
 }

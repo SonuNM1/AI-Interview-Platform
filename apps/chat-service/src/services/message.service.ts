@@ -16,7 +16,6 @@ export const createMessageService = async (
     mimeType: string;
   }[],
 ): Promise<MessageDocument> => {
-
   const conversation = await Conversation.findOne({
     _id: conversationId,
     participants: senderId,
@@ -49,6 +48,7 @@ export const createMessageService = async (
     senderId,
     text,
     attachments,
+    readBy: [senderId],
   });
 
   await Conversation.findByIdAndUpdate(conversationId, {
@@ -106,6 +106,17 @@ export const editMessageService = async (
     throw new Error("Message not found.");
   }
 
+  // make sure the authenticated user belongs to this conversation
+
+  const conversation = await Conversation.findOne({
+    _id: message.conversationId,
+    participants: userId,
+  });
+
+  if (!conversation) {
+    throw new Error("You are not a participant in this conversation.");
+  }
+
   if (message.senderId !== userId) {
     throw new Error("You can only edit your own messages.");
   }
@@ -137,6 +148,17 @@ export const deleteMessageService = async (
 
   if (!message) {
     throw new Error("Message not found.");
+  }
+
+  // Make sure the authenticated user belongs to this conversation
+  
+  const conversation = await Conversation.findOne({
+    _id: message.conversationId,
+    participants: userId,
+  });
+
+  if (!conversation) {
+    throw new Error("You are not a participant in this conversation.");
   }
 
   if (message.senderId !== userId) {
@@ -171,7 +193,6 @@ export const sendMessageService = async (
   text: string,
   file?: Express.Multer.File,
 ): Promise<MessageDocument> => {
-
   const conversation = await Conversation.findOne({
     _id: conversationId,
     participants: senderId,
@@ -182,7 +203,7 @@ export const sendMessageService = async (
   }
 
   // Mentorship chat requires an active subscription to send messages
-  
+
   if (conversation.type === "MENTORSHIP") {
     const otherParticipant = conversation.participants.find(
       (participantId) => participantId !== senderId,
@@ -229,6 +250,7 @@ export const sendMessageService = async (
     senderId,
     text,
     attachments,
+    readBy: [senderId],
   });
 
   // keep the conversation's lastMessageId in sync with the newest message, including messages that contain attachments
@@ -238,4 +260,35 @@ export const sendMessageService = async (
   });
 
   return message;
+};
+
+// Marks all unread messages in a conversation as read by the current user
+
+export const markConversationMessagesReadService = async (
+  conversationId: string,
+  userId: string,
+) => {
+  const conversation = await Conversation.findOne({
+    _id: conversationId,
+    participants: userId,
+  });
+
+  if (!conversation) {
+    throw new Error("You must be a participant in the conversation.");
+  }
+
+  await Message.updateMany(
+    {
+      conversationId,
+      senderId: { $ne: userId },
+      readBy: { $ne: userId },
+    },
+    {
+      $addToSet: {
+        readBy: userId,
+      },
+    },
+  );
+
+  return true;
 };

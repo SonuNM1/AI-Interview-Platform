@@ -7,7 +7,8 @@ import Payment, {
 } from "../models/payment.model.js";
 import razorpay from "../providers/razorpay.provider.js";
 import axios from "axios";
-import crypto from "node:crypto"
+import crypto from "node:crypto";
+import { publishMentorshipAccessGranted } from "./mentorship-access.service.js";
 
 interface CreateMentorshipSubscriptionInput {
   mentorId: string;
@@ -172,13 +173,8 @@ export const verifyMentorshipSubscriptionPayment = async (
   }
 
   const generatedSignature = crypto
-    .createHmac(
-      "sha256",
-      process.env.RAZORPAY_KEY_SECRET!,
-    )
-    .update(
-      `${input.razorpayPaymentId}|${subscription.razorpaySubscriptionId}`,
-    )
+    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+    .update(`${input.razorpayPaymentId}|${subscription.razorpaySubscriptionId}`)
     .digest("hex");
 
   if (generatedSignature !== input.razorpaySignature) {
@@ -188,12 +184,52 @@ export const verifyMentorshipSubscriptionPayment = async (
     };
   }
 
+  // the checkout payment is successfully verified. Mark the local subscription as active immediately
+
+  subscription.status = SubscriptionStatus.ACTIVE;
+
+  // fetching the latest subscription state from Razorpay so that our local access projection gets the correct billing period
+
+  try {
+    const razorpaySubscription = await razorpay.subscriptions.fetch(
+      input.razorpaySubscriptionId,
+    );
+
+    subscription.currentStart = razorpaySubscription.current_start
+      ? new Date(razorpaySubscription.current_start * 1000)
+      : undefined;
+
+    subscription.currentEnd = razorpaySubscription.current_end
+      ? new Date(razorpaySubscription.current_end * 1000)
+      : undefined;
+
+    if (typeof razorpaySubscription.paid_count === "number") {
+      subscription.paidCount = razorpaySubscription.paid_count;
+    }
+  } catch (error) {
+    console.error("unable to fetch razorpay subscription details", error);
+  }
+
+  await subscription.save();
+
+  // grant the initial mentorship access immediately. Imp since razorpya webhooks cannot reach localhost during local development
+
+  await publishMentorshipAccessGranted({
+    _id: subscription._id,
+    userId: subscription.userId,
+    mentorId: subscription.mentorId,
+    amount: subscription.amount,
+    currency: subscription.currency,
+    razorpayPaymentId: input.razorpayPaymentId,
+    razorpaySubscriptionId: subscription.razorpaySubscriptionId,
+    currentEnd: subscription.currentEnd,
+  });
+
   return {
     success: true,
     data: {
       verified: true,
-      razorpaySubscriptionId:
-        subscription.razorpaySubscriptionId,
+      razorpaySubscriptionId: subscription.razorpaySubscriptionId,
     },
   };
 };

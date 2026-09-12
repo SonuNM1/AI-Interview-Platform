@@ -4,6 +4,8 @@ import { SOCKET_EVENTS } from "../constants/socket-events.js";
 import {
   createMessageService,
   editMessageService,
+  deleteMessageService,
+  markConversationMessagesReadService,
 } from "../services/message.service.js";
 import { lastSeenUsers, onlineUsers } from "../utils/presence.js";
 import { streamAIResponse } from "../services/ai-service.client.js";
@@ -12,42 +14,76 @@ import { AuthenticatedSocket } from "../types/socket.js";
 // register all socket events
 
 export const registerSocketEvents = (io: Server) => {
-
   io.on(SOCKET_EVENTS.CONNECTION, (socket) => {
-
-    const authenticatedSocket = socket as AuthenticatedSocket ; 
+    const authenticatedSocket = socket as AuthenticatedSocket;
 
     console.log(`✅ User Connected : ${socket.id}`);
 
-    // join a conversation room
+    socket.on(
+      SOCKET_EVENTS.JOIN_CONVERSATION,
+      async (payload: string | { conversationId: string }) => {
+        try {
+          const conversationId =
+            typeof payload === "string" ? payload : payload?.conversationId;
 
-    socket.on(SOCKET_EVENTS.JOIN_CONVERSATION, async (conversationId: string) => {
+          if (!conversationId) {
+            socket.emit("error", {
+              message: "Conversation ID is required",
+            });
+            return;
+          }
 
-      const conversation = await Conversation.findById(conversationId) ; 
+          const conversation = await Conversation.findById(conversationId);
 
-      if(!conversation) {
-        return ; 
-      }
+          if (!conversation) {
+            socket.emit("error", {
+              message: "Conversation not found",
+            });
+            return;
+          }
 
-      if(!conversation.participants.includes(authenticatedSocket.userId)) {
-        socket.emit("error", {
-          message: "You are not a participant in this conversation"
-        })
-        return ; 
-      }
+          if (!conversation.participants.includes(authenticatedSocket.userId)) {
+            socket.emit("error", {
+              message: "You are not a participant in this conversation",
+            });
+            return;
+          }
 
-      // Join the requested conversation room
+          // Join the requested conversation room
 
-      socket.join(conversationId);
+          socket.join(conversationId);
 
-      console.log(`${socket.id} joined ${conversationId}`);
-    });
+          console.log(`${socket.id} joined ${conversationId}`);
+        } catch (error) {
+          console.error("Join conversation error:", error);
+
+          socket.emit("error", {
+            message: "Unable to join conversation",
+          });
+        }
+      },
+    );
+
+    socket.on(
+      SOCKET_EVENTS.LEAVE_CONVERSATION,
+      (payload: string | { conversationId: string }) => {
+        const conversationId =
+          typeof payload === "string" ? payload : payload?.conversationId;
+
+        if (!conversationId) {
+          return;
+        }
+
+        socket.leave(conversationId);
+
+        console.log(`${socket.id} left ${conversationId}`);
+      },
+    );
 
     // marks a user online
 
     socket.on(SOCKET_EVENTS.USER_CONNECTED, () => {
-
-      const userId = authenticatedSocket.userId
+      const userId = authenticatedSocket.userId;
       // save online user
 
       onlineUsers.set(userId, socket.id);
@@ -64,8 +100,7 @@ export const registerSocketEvents = (io: Server) => {
     // returns presence of a user
 
     socket.on(SOCKET_EVENTS.GET_PRESENCE, () => {
-
-      const userId = authenticatedSocket.userId ; 
+      const userId = authenticatedSocket.userId;
 
       socket.emit(SOCKET_EVENTS.PRESENCE, {
         userId,
@@ -77,39 +112,60 @@ export const registerSocketEvents = (io: Server) => {
     // handle sending a message
 
     socket.on(SOCKET_EVENTS.SEND_MESSAGE, async (payload) => {
-
       const { conversationId, text, attachments } = payload;
 
-      const conversation = await Conversation.findById(conversationId) 
+      const conversation = await Conversation.findById(conversationId);
 
-      if(!conversation) {
-        return ; 
+      if (!conversation) {
+        return;
       }
 
-      if(!conversation.participants.includes(authenticatedSocket.userId)) {
-        return ; 
+      if (!conversation.participants.includes(authenticatedSocket.userId)) {
+        return;
       }
 
       try {
         const message = await createMessageService(
-          conversationId, 
-          authenticatedSocket.userId, 
-          text, 
-          attachments 
-        )
+          conversationId,
+          authenticatedSocket.userId,
+          text,
+          attachments,
+        );
 
-        // broadcast message to everyone in the room 
+        // broadcast message to everyone in the room
 
-        io.to(conversationId).emit(
-          SOCKET_EVENTS.RECEIVE_MESSAGE, 
-          message 
-        ) ; 
+        io.to(conversationId).emit(SOCKET_EVENTS.RECEIVE_MESSAGE, message);
       } catch (error) {
-        console.error("Socket message error: ", error) ; 
+        console.error("Socket message error: ", error);
 
         socket.emit("error", {
-          message: error instanceof Error ? error.message : "Failed to send message"
-        })
+          message:
+            error instanceof Error ? error.message : "Failed to send message",
+        });
+      }
+    });
+
+    // Mark all incoming messages in a conversation as read
+
+    socket.on(SOCKET_EVENTS.MESSAGE_READ, async ({ conversationId }) => {
+      try {
+        if (!conversationId) {
+          return;
+        }
+
+        await markConversationMessagesReadService(
+          conversationId,
+          authenticatedSocket.userId,
+        );
+
+        // Tell the other participant that this user's messages are now read
+
+        socket.to(conversationId).emit(SOCKET_EVENTS.MESSAGE_READ, {
+          conversationId,
+          userId: authenticatedSocket.userId,
+        });
+      } catch (error) {
+        console.error("Message read error:", error);
       }
     });
 
@@ -144,17 +200,15 @@ export const registerSocketEvents = (io: Server) => {
     // broadcast typing event to everyon else in the conversation
 
     socket.on(SOCKET_EVENTS.TYPING, ({ conversationId }) => {
-
       socket.to(conversationId).emit(SOCKET_EVENTS.TYPING, {
         conversationId,
-        userId: authenticatedSocket.userId 
+        userId: authenticatedSocket.userId,
       });
     });
 
     // Broadcast stop typing event
 
     socket.on(SOCKET_EVENTS.STOP_TYPING, ({ conversationId }) => {
-
       socket.to(conversationId).emit(SOCKET_EVENTS.STOP_TYPING, {
         conversationId,
         userId: authenticatedSocket.userId,
@@ -166,7 +220,6 @@ export const registerSocketEvents = (io: Server) => {
     socket.on(
       SOCKET_EVENTS.AI_MENTOR_MESSAGE,
       async ({ conversationId, message }) => {
-
         console.log("✅ AI_MENTOR_MESSAGE received");
 
         try {
@@ -204,23 +257,59 @@ export const registerSocketEvents = (io: Server) => {
       },
     );
 
-    // handles editing a message
+    // handles editing a message and broadcasts the updated message to everyone currently connected to the conversation
 
     socket.on(SOCKET_EVENTS.EDIT_MESSAGE, async ({ messageId, text }) => {
-      // Update the message
+      try {
+        if (!messageId || !text.trim()) return;
 
-      const message = await editMessageService(
-        messageId, 
-        text,
-        authenticatedSocket.userId, 
-      );
+        // Update the message
 
-      // Notify everyone in the conversation
+        const message = await editMessageService(
+          messageId,
+          text.trim(),
+          authenticatedSocket.userId,
+        );
 
-      io.to(message.conversationId.toString()).emit(
-        SOCKET_EVENTS.MESSAGE_EDITED,
-        message,
-      );
+        // Notify everyone in the conversation
+
+        io.to(message.conversationId.toString()).emit(
+          SOCKET_EVENTS.MESSAGE_EDITED,
+          message,
+        );
+      } catch (error) {
+        console.error("Socket edit message error: ", error);
+
+        socket.emit("error", {
+          message:
+            error instanceof Error ? error.message : "Failed to edit message",
+        });
+      }
+    });
+
+    // handles deleting a message and broadcasts the deleted message state to everyone in the conversation
+
+    socket.on(SOCKET_EVENTS.DELETE_MESSAGE, async ({ messageId }) => {
+      try {
+        if (!messageId) return;
+
+        const message = await deleteMessageService(
+          messageId,
+          authenticatedSocket.userId,
+        );
+
+        io.to(message.conversationId.toString()).emit(
+          SOCKET_EVENTS.MESSAGE_DELETED,
+          message,
+        );
+      } catch (error) {
+        console.error("Socket delete message error:", error);
+
+        socket.emit("error", {
+          message:
+            error instanceof Error ? error.message : "Failed to delete message",
+        });
+      }
     });
   });
 };

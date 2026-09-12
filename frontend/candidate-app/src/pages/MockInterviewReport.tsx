@@ -48,7 +48,7 @@ export function MockInterviewReport() {
 
   if (query.isLoading) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-[#141311] text-sm text-[#817A72]">
+      <div className="flex min-h-full items-center justify-center bg-slate-50 text-sm text-slate-500">
         Loading report...
       </div>
     );
@@ -59,7 +59,7 @@ export function MockInterviewReport() {
     !query.data?.data
   ) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-[#141311] text-sm text-red-400">
+      <div className="flex min-h-full items-center justify-center bg-slate-50 text-sm text-red-500">
         Unable to load report.
       </div>
     );
@@ -94,19 +94,19 @@ export function MockInterviewReport() {
     ).length;
 
   return (
-    <div className="min-h-full bg-[#141311] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
 
         <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#D98260]">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
             Mock Interview
           </p>
 
-          <h1 className="mt-2 text-2xl font-semibold text-[#F2EDE4]">
+          <h1 className="mt-2 text-2xl font-bold text-slate-900">
             Interview Results
           </h1>
 
-          <p className="mt-1 text-sm text-[#817A72]">
+          <p className="mt-1 text-sm text-slate-500">
             Review your performance and identify areas
             to improve.
           </p>
@@ -160,9 +160,9 @@ export function MockInterviewReport() {
                   (strength) => (
                     <li
                       key={strength}
-                      className="flex gap-2 text-sm leading-6 text-[#CFC7BD]"
+                      className="flex gap-2 text-sm leading-6 text-slate-600"
                     >
-                      <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-[#8FC49B]" />
+                      <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
                       {strength}
                     </li>
                   ),
@@ -176,9 +176,9 @@ export function MockInterviewReport() {
                   (weakness) => (
                     <li
                       key={weakness}
-                      className="flex gap-2 text-sm leading-6 text-[#CFC7BD]"
+                      className="flex gap-2 text-sm leading-6 text-slate-600"
                     >
-                      <XCircle className="mt-1 h-4 w-4 shrink-0 text-red-400" />
+                      <XCircle className="mt-1 h-4 w-4 shrink-0 text-red-500" />
                       {weakness}
                     </li>
                   ),
@@ -188,12 +188,12 @@ export function MockInterviewReport() {
 
             <div className="lg:col-span-2">
               <ReportSection title="Summary">
-                <p className="text-sm leading-7 text-[#CFC7BD]">
+                <p className="text-sm leading-7 text-slate-600">
                   {report.summary}
                 </p>
 
                 <div className="mt-5">
-                  <span className="rounded-full bg-[#2A2420] px-3 py-1.5 text-xs font-semibold text-[#D98260]">
+                  <span className="rounded-full bg-gradient-to-r from-violet-50 to-indigo-50 px-3 py-1.5 text-xs font-semibold text-violet-700">
                     {report.recommendation}
                   </span>
                 </div>
@@ -205,15 +205,15 @@ export function MockInterviewReport() {
 
         {/* Question analytics */}
         
-        <section className="mt-6 overflow-hidden rounded-2xl border border-[#2F2B27] bg-[#1B1917]">
+        <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-          <div className="border-b border-[#2F2B27] px-5 py-4">
-            <h2 className="text-sm font-semibold text-[#F2EDE4]">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h2 className="text-sm font-semibold text-slate-900">
               Question Performance
             </h2>
           </div>
 
-          <div className="divide-y divide-[#2F2B27]">
+          <div className="divide-y divide-slate-100">
 
             {questions.map(
               (question) => {
@@ -237,22 +237,22 @@ export function MockInterviewReport() {
                       }
                       className="flex w-full cursor-pointer items-center gap-4 text-left"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#2A2420] text-xs font-semibold text-[#D98260]">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-50 to-indigo-50 text-xs font-semibold text-violet-700">
                         {question.questionNumber}
                       </span>
 
-                      <span className="min-w-0 flex-1 truncate text-sm text-[#D7CFC5]">
+                      <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
                         {question.question}
                       </span>
 
-                      <span className="shrink-0 text-sm font-semibold text-[#D98260]">
+                      <span className="shrink-0 text-sm font-semibold text-violet-600">
                         {(question.score ?? 0).toFixed(1)}/10
                       </span>
 
                       {expanded ? (
-                        <ChevronUp className="h-4 w-4 text-[#817A72]" />
+                        <ChevronUp className="h-4 w-4 text-slate-400" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-[#817A72]" />
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
                       )}
                     </button>
 
@@ -260,32 +260,32 @@ export function MockInterviewReport() {
                       <div className="mt-5 ml-12 space-y-5">
 
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5F5A54]">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                             Question
                           </p>
 
-                          <p className="mt-2 text-sm leading-6 text-[#D7CFC5]">
+                          <p className="mt-2 text-sm leading-6 text-slate-700">
                             {question.question}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5F5A54]">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                             Your Answer
                           </p>
 
-                          <p className="mt-2 text-sm leading-6 text-[#A9A29A]">
+                          <p className="mt-2 text-sm leading-6 text-slate-500">
                             {question.candidateAnswer ||
                               "No answer provided."}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5F5A54]">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                             AI Feedback
                           </p>
 
-                          <p className="mt-2 text-sm leading-6 text-[#A9A29A]">
+                          <p className="mt-2 text-sm leading-6 text-slate-500">
                             {question.feedback ||
                               "No feedback available."}
                           </p>
@@ -315,16 +315,16 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-[#2F2B27] bg-[#1B1917] p-5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#2A2420] text-[#D98260]">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-violet-50 to-indigo-50 text-violet-600">
         {icon}
       </div>
 
-      <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5F5A54]">
+      <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
         {label}
       </p>
 
-      <p className="mt-1 text-xl font-semibold text-[#F2EDE4]">
+      <p className="mt-1 text-xl font-bold text-slate-900">
         {value}
       </p>
     </div>
@@ -339,8 +339,8 @@ function ReportSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-[#2F2B27] bg-[#1B1917] p-5">
-      <h2 className="mb-4 text-sm font-semibold text-[#F2EDE4]">
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 className="mb-4 text-sm font-semibold text-slate-900">
         {title}
       </h2>
 

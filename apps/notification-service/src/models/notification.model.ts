@@ -8,6 +8,10 @@ export enum NotificationType {
   INTERVIEW_UPDATED = "INTERVIEW_UPDATED",
   INTERVIEW_CANCELLED = "INTERVIEW_CANCELLED",
   INTERVIEW_COMPLETED = "INTERVIEW_COMPLETED",
+
+  // mentor receives this after a successful mentorship purchase 
+
+  MENTORSHIP_PURCHASED = "MENTORSHIP_PURCHASED"
 }
 
 // Persistent in-app notification document.

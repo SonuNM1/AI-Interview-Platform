@@ -7,25 +7,19 @@ interface CandidateLayoutProps {
   children: ReactNode;
 }
 
-export function CandidateLayout({
-  children,
-}: CandidateLayoutProps) {
+export function CandidateLayout({ children }: CandidateLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const location = useLocation();
 
   // InterviewRoom is a focused experience.
   // Keep its existing dark experience unchanged.
-  const isInterviewRoom = location.pathname.includes(
-    "/candidate/interview/",
-  );
+  const isInterviewRoom = location.pathname.includes("/candidate/interview/");
 
   // Interview room gets the entire viewport.
   if (isInterviewRoom) {
     return (
-      <div className="h-screen overflow-hidden bg-[#0E1117]">
-        {children}
-      </div>
+      <div className="h-screen overflow-hidden bg-[#0E1117]">{children}</div>
     );
   }
 
@@ -47,9 +41,7 @@ export function CandidateLayout({
   // Keep the existing interview-room fallback unchanged.
   if (isInterviewRoom) {
     return (
-      <div className="min-h-screen bg-[#0E1117] text-[#F2F4F7]">
-        {children}
-      </div>
+      <div className="min-h-screen bg-[#0E1117] text-[#F2F4F7]">{children}</div>
     );
   }
 
@@ -68,8 +60,13 @@ export function CandidateLayout({
         />
 
         {/* Main Candidate workspace */}
-        
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main
+          className={
+            location.pathname.startsWith("/candidate/chat")
+              ? "flex-1 p-2 sm:p-4 lg:p-5"
+              : "flex-1 p-4 sm:p-6 lg:p-8"
+          }
+        >
           {children}
         </main>
       </div>

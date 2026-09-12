@@ -24,33 +24,31 @@ export function MockInterviewHistory({
   onViewReport,
 }: MockInterviewHistoryProps) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#2F2B27] bg-[#1B1917]">
-
-      <div className="border-b border-[#2F2B27] px-5 py-4">
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 px-5 py-4">
         <div className="flex items-center gap-2">
           <History
-            className="h-4 w-4 text-[#D98260]"
+            className="h-4 w-4 text-violet-600"
             strokeWidth={1.8}
           />
 
-          <h2 className="text-sm font-semibold text-[#F2EDE4]">
+          <h2 className="text-sm font-bold text-slate-900">
             Previous Interviews
           </h2>
         </div>
       </div>
 
-      <div className="divide-y divide-[#2F2B27]">
-
+      <div className="divide-y divide-slate-100">
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 px-5 py-10 text-sm text-[#817A72]">
+          <div className="flex items-center justify-center gap-2 px-5 py-10 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading history...
           </div>
         ) : interviews.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <History className="mx-auto h-6 w-6 text-[#5F5A54]" />
+            <History className="mx-auto h-6 w-6 text-slate-300" />
 
-            <p className="mt-3 text-sm text-[#817A72]">
+            <p className="mt-3 text-sm text-slate-500">
               No previous mock interviews.
             </p>
           </div>
@@ -58,16 +56,15 @@ export function MockInterviewHistory({
           interviews.map((interview) => (
             <div
               key={interview._id}
-              className="p-5 transition hover:bg-[#211F1C]"
+              className="p-5 transition hover:bg-slate-50"
             >
               <div className="flex items-start justify-between gap-4">
-
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-[#F2EDE4]">
+                  <p className="text-sm font-semibold text-slate-900">
                     Technical Mock Interview
                   </p>
 
-                  <div className="mt-2 flex items-center gap-2 text-xs text-[#817A72]">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
                     <Clock3 className="h-3.5 w-3.5" />
 
                     {new Date(
@@ -78,11 +75,11 @@ export function MockInterviewHistory({
 
                 {interview.score !== undefined && (
                   <div className="shrink-0 text-right">
-                    <p className="text-lg font-semibold text-[#D98260]">
+                    <p className="text-lg font-bold text-violet-600">
                       {interview.score.toFixed(1)}
                     </p>
 
-                    <p className="text-[10px] text-[#6F6962]">
+                    <p className="text-[10px] text-slate-400">
                       / 10
                     </p>
                   </div>
@@ -90,14 +87,13 @@ export function MockInterviewHistory({
               </div>
 
               <div className="mt-4 flex items-center justify-between">
-
                 <span
                   className={`
-                    rounded-full px-2.5 py-1 text-[10px] font-medium
+                    rounded-full px-2.5 py-1 text-[10px] font-semibold
                     ${
                       interview.status === "COMPLETED"
-                        ? "bg-[#263128] text-[#8FC49B]"
-                        : "bg-[#2A2521] text-[#A9A29A]"
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-slate-100 text-slate-500"
                     }
                   `}
                 >
@@ -110,9 +106,10 @@ export function MockInterviewHistory({
                     onClick={() =>
                       onViewReport(interview._id)
                     }
-                    className="flex cursor-pointer items-center gap-1 text-xs font-medium text-[#D98260] transition hover:text-[#F2EDE4]"
+                    className="flex cursor-pointer items-center gap-1 text-xs font-semibold text-violet-600 transition hover:text-indigo-600"
                   >
                     View Report
+
                     <ArrowRight className="h-3.5 w-3.5" />
                   </button>
                 )}
@@ -120,7 +117,6 @@ export function MockInterviewHistory({
             </div>
           ))
         )}
-
       </div>
     </section>
   );

@@ -417,19 +417,23 @@ export function InterviewRoom() {
 
   if (isInterviewLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0E1117] text-[#F2F4F7]">
-        <p className="text-sm text-[#8B95A5]">Loading interview...</p>
+      <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-900">
+        <p className="text-sm text-slate-500">
+          Loading interview...
+        </p>
       </div>
     );
   }
 
   if (isInterviewError || !interview) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0E1117] px-4 text-[#F2F4F7]">
+      <div className="flex h-screen items-center justify-center bg-slate-50 px-4 text-slate-900">
         <div className="text-center">
-          <h1 className="text-xl font-semibold">Unable to load interview</h1>
+          <h1 className="text-xl font-bold text-slate-900">
+            Unable to load interview
+          </h1>
 
-          <p className="mt-2 text-sm text-[#8B95A5]">
+          <p className="mt-2 text-sm text-slate-500">
             The interview could not be loaded. Please try again.
           </p>
         </div>
@@ -439,26 +443,30 @@ export function InterviewRoom() {
 
   if (interview?.status === "SCHEDULED" && isBeforeScheduledTime) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center px-4">
-        <div className="w-full max-w-lg rounded-2xl border border-[#3A332E] bg-[#1B1917] p-7 text-center shadow-2xl">
-          <p className="text-sm font-medium text-[#B9674B]">
+      <div className="flex min-h-[70vh] items-center justify-center bg-slate-50 px-4">
+        <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-xl shadow-violet-100/60">
+          <p className="text-sm font-semibold text-violet-600">
             Interview scheduled
           </p>
 
-          <h2 className="mt-2 text-2xl font-semibold text-[#F2EDE4]">
+          <h2 className="mt-2 text-2xl font-bold text-slate-900">
             {interview.title}
           </h2>
 
-          <p className="mt-2 text-sm text-[#817A72]">{interview.role}</p>
+          <p className="mt-2 text-sm text-slate-500">
+            {interview.role}
+          </p>
 
-          <div className="mt-7 rounded-xl border border-[#332B27] bg-[#211E1B] p-5">
-            <p className="text-sm text-[#9B9188]">Interview starts in</p>
+          <div className="mt-7 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-indigo-50 p-5">
+            <p className="text-sm text-slate-500">
+              Interview starts in
+            </p>
 
-            <p className="mt-2 font-mono text-4xl font-semibold tracking-wider text-[#D98260]">
+            <p className="mt-2 font-mono text-4xl font-bold tracking-wider text-violet-600">
               {formatCountdown(timeLeft ?? 0)}
             </p>
 
-            <p className="mt-3 text-xs text-[#817A72]">
+            <p className="mt-3 text-xs text-slate-400">
               You can start the interview when the scheduled time arrives.
             </p>
           </div>
@@ -469,20 +477,24 @@ export function InterviewRoom() {
 
   if (isInterviewCompleted) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0E1117] px-4 text-[#F2F4F7]">
-        <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#151A23] p-8 text-center shadow-2xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
-            <span className="text-3xl text-emerald-400">✓</span>
+      <div className="flex h-screen items-center justify-center bg-slate-50 px-4 text-slate-900">
+        <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl shadow-violet-100/60">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+            <span className="text-3xl text-emerald-600">
+              ✓
+            </span>
           </div>
 
-          <h1 className="mt-6 text-2xl font-semibold">Interview Completed</h1>
+          <h1 className="mt-6 text-2xl font-bold text-slate-900">
+            Interview Completed
+          </h1>
 
-          <p className="mt-3 text-sm leading-relaxed text-[#8B95A5]">
+          <p className="mt-3 text-sm leading-relaxed text-slate-500">
             Thank you for completing the interview. Your responses have been
             submitted successfully.
           </p>
 
-          <p className="mt-6 text-xs text-[#6F7887]">
+          <p className="mt-6 text-xs text-slate-400">
             You may now safely close this window.
           </p>
         </div>
@@ -491,22 +503,26 @@ export function InterviewRoom() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#0E1117] text-[#F2F4F7]">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900">
       {/* Interview Header */}
 
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4 lg:px-6">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 shadow-sm lg:px-6">
         <div>
-          <h1 className="text-lg font-semibold">AI Interview</h1>
+          <h1 className="text-lg font-bold text-slate-900">
+            AI Interview
+          </h1>
 
-          <div className="mt-1 flex items-center gap-2 text-xs text-[#8B95A5]">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
             Interview in progress
           </div>
         </div>
 
         {/* Interview timer - actual timer will be connected later */}
-        <div className="hidden items-center gap-2 text-sm text-[#AAB2BF] sm:flex">
-          <FiClock className="h-4 w-4" />
+
+        <div className="hidden items-center gap-2 text-sm text-slate-600 sm:flex">
+          <FiClock className="h-4 w-4 text-violet-600" />
+
           {interview?.startedAt && (
             <InterviewTimer
               startedAt={interview.startedAt}
@@ -518,7 +534,7 @@ export function InterviewRoom() {
 
         <button
           type="button"
-          className="flex cursor-pointer items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
+          className="flex cursor-pointer items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
           onClick={() => setShowEndInterviewModal(true)}
         >
           <FiPhoneOff className="h-4 w-4" />
@@ -528,10 +544,10 @@ export function InterviewRoom() {
 
       {/* main interview area */}
 
-      <main className="grid min-h-0 flex-1 gap-3 overflow-hidden p-2 sm:p-3 lg:grid-cols-[1.05fr_0.95fr] lg:p-4">
+      <main className="grid min-h-0 flex-1 gap-3 overflow-hidden bg-slate-50 p-2 sm:p-3 lg:grid-cols-[1.05fr_0.95fr] lg:p-4">
         {/* left ai-interview */}
 
-        <section className="relative min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-[#151A23]">
+        <section className="relative min-h-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           {/* Replace this image with the final interviewer asset */}
 
           <img
@@ -542,23 +558,25 @@ export function InterviewRoom() {
 
           {/* Dark overlay keeps the image integrated with the UI */}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#080B10]/80 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
 
           {/* Subtle blue glow while the AI is speaking */}
 
           {isSpeaking && (
-            <div className="pointer-events-none absolute inset-0 animate-pulse bg-blue-500/5" />
+            <div className="pointer-events-none absolute inset-0 animate-pulse bg-violet-500/5" />
           )}
 
           {/* AI interviewer status */}
 
-          <div className="mt-2 rounded-xl border border-blue-500/20 bg-[#10151E] p-3 lg:p-3.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          <div className="mt-2 rounded-2xl border border-violet-200 bg-white/95 p-3 shadow-lg backdrop-blur-sm lg:p-3.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
 
             <div>
-              <p className="text-sm font-medium">AI Interviewer</p>
+              <p className="text-sm font-semibold text-slate-900">
+                AI Interviewer
+              </p>
 
-              <p className="text-xs text-[#8B95A5]">
+              <p className="text-xs text-slate-500">
                 {isSpeaking
                   ? "Speaking..."
                   : isQuestionLoading
@@ -574,21 +592,21 @@ export function InterviewRoom() {
         <section className="flex min-h-0 flex-col gap-4 overflow-hidden">
           {/* current question */}
 
-          <div className="shrink-0 rounded-2xl border border-white/10 bg-[#151A23] p-3 lg:p-4">
+          <div className="shrink-0 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm lg:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-[#8B95A5]">
+                <p className="text-sm font-semibold text-slate-700">
                   Current Question
                 </p>
 
-                <p className="mt-1 text-xs text-[#6F7887]">
+                <p className="mt-1 text-xs text-slate-400">
                   Question {currentQuestion?.questionNumber ?? 1}
                 </p>
               </div>
             </div>
 
-            <div className="mt-3 rounded-xl border border-blue-500/20 bg-[#10151E] p-3.5 lg:p-4">
-              <p className="text-base leading-snug font-medium text-[#F2F4F7] lg:text-lg">
+            <div className="mt-3 rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-indigo-50 p-3.5 lg:p-4">
+              <p className="text-base font-semibold leading-snug text-slate-900 lg:text-lg">
                 {isQuestionLoading
                   ? "Preparing your first question..."
                   : isQuestionError
@@ -600,14 +618,14 @@ export function InterviewRoom() {
 
             {/* AI voice status and animated waveform */}
 
-            <div className="mt-2 flex items-center gap-3 text-sm text-blue-400">
+            <div className="mt-2 flex items-center gap-3 text-sm text-violet-600">
               {/* animated voice waveform */}
 
               <div className="flex h-5 items-center gap-1">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((bar) => (
                   <span
                     key={bar}
-                    className={`w-1 rounded-full bg-blue-400 transition-all ${
+                    className={`w-1 rounded-full bg-violet-500 transition-all ${
                       isSpeaking ? "animate-pulse" : "h-1.5"
                     }`}
                     style={
@@ -636,12 +654,14 @@ export function InterviewRoom() {
 
           {/* candidate answer */}
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#151A23] p-4 lg:p-5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:p-5">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Your Answer</p>
+              <p className="text-sm font-semibold text-slate-900">
+                Your Answer
+              </p>
 
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 Ready
               </div>
             </div>
@@ -650,7 +670,8 @@ export function InterviewRoom() {
 
             <div className="mt-2 flex flex-1 flex-col items-center justify-center">
               {/* Explains the current microphone state to the candidate. */}
-              <p className="mt-3 text-sm text-[#AAB2BF]">
+
+              <p className="mt-3 text-sm text-slate-500">
                 {isRecording
                   ? "Listening... speak naturally."
                   : isSpeaking
@@ -660,12 +681,12 @@ export function InterviewRoom() {
 
               {/* Placeholder for live transcription */}
 
-              <div className="mt-3 w-full rounded-xl border border-white/10 bg-[#10151E] p-3">
-                <p className="text-xs font-medium text-[#6F7887]">
+              <div className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-semibold text-slate-400">
                   {isSubmitting ? "PROCESSING ANSWER" : "TRANSCRIPTION"}
                 </p>
 
-                <p className="mt-2 max-h-16 overflow-y-auto text-sm leading-relaxed text-[#AAB2BF]">
+                <p className="mt-2 max-h-16 overflow-y-auto text-sm leading-relaxed text-slate-600">
                   {transcript ||
                     (isRecording
                       ? "Listening...your answer is being recorded."

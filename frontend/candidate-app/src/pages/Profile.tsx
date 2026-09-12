@@ -11,7 +11,7 @@ import {
   uploadResume,
   getFileSignedUrl,
   getFileMetadata,
-  requestAccountDeletion, 
+  requestAccountDeletion,
   verifyAccountDeletion,
   type UpdateUserProfileData,
 } from "../services/user.api";
@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import { AccountDeletionModal } from "../components/AccountDeletionModal";
 
 export function Profile() {
-
   const queryClient = useQueryClient(); // access tanstack cache so we can invalidate server data after profile changes
 
   const [isEditing, setIsEditing] = useState(false);
@@ -28,7 +27,6 @@ export function Profile() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Fetch the authenticated candidate's profile. TanStack Query handles loading, caching, errors, refetching and keeping the server state available
-
   const {
     data: profile,
     isLoading,
@@ -40,12 +38,10 @@ export function Profile() {
   });
 
   // Updates the candidate profile on the server. After success, the profile query is invalidated so TanStack Query fetches the latest saved profile
-
   const updateProfileMutation = useMutation({
     mutationFn: updateMyProfile, // sends the edited profile data to the backend
 
     // the backend profile is now changed, so the cached profile may contain old data
-
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["profile"],
@@ -64,12 +60,10 @@ export function Profile() {
   });
 
   // uploads a new profile avatar and refreshes the profile query so the new avatarField is available
-
   const avatarMutation = useMutation({
     mutationFn: uploadAvatar, // uploads the new avatar and updates the user's avatarFileId
 
     // the profile now contains a new avatarFileId so refresh the cached profile
-
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["profile"],
@@ -85,49 +79,45 @@ export function Profile() {
     },
   });
 
-  // requests an OTP before allowing the candidate to delete the account 
-
+  // requests an OTP before allowing the candidate to delete the account
   const requestDeletionMutation = useMutation({
-    mutationFn: requestAccountDeletion, 
+    mutationFn: requestAccountDeletion,
 
-    onSuccess: ()=> {
-      setIsDeleteModalOpen(true) ; 
-      toast.success("Verification OTP sent to your mail.")
+    onSuccess: () => {
+      setIsDeleteModalOpen(true);
+      toast.success("Verification OTP sent to your mail.");
     },
 
     onError: (error: any) => {
-      console.error("Account deletion request failed: ", error) ; 
+      console.error("Account deletion request failed: ", error);
 
-      toast.error(error?.response?.data?.message || "Failed to send account deletion OTP")
-    }
-  })
+      toast.error(
+        error?.response?.data?.message || "Failed to send account deletion OTP",
+      );
+    },
+  });
 
-  // Verifies the OTP and completes account deletion 
-
+  // Verifies the OTP and completes account deletion
   const verifyDeletionMutation = useMutation({
-  mutationFn: verifyAccountDeletion,
+    mutationFn: verifyAccountDeletion,
 
-  onSuccess: async () => {
-    setIsDeleteModalOpen(false);
+    onSuccess: async () => {
+      setIsDeleteModalOpen(false);
 
-    toast.success("Your account has been deleted.");
+      toast.success("Your account has been deleted.");
 
-    // Authentication is owned by the Shell.
-    await window.__AUTH_BRIDGE__?.logout();
-  },
+      // Authentication is owned by the Shell.
+      await window.__AUTH_BRIDGE__?.logout();
+    },
 
-  onError: (error: any) => {
-    console.error("Account deletion verification failed:", error);
+    onError: (error: any) => {
+      console.error("Account deletion verification failed:", error);
 
-    toast.error(
-      error?.response?.data?.message ||
-        "Invalid or expired OTP.",
-    );
-     },
-});
+      toast.error(error?.response?.data?.message || "Invalid or expired OTP.");
+    },
+  });
 
-  // generate a temporary signed URL for the private avatar. The query only runs when an avatar exists
-
+  // generate a temporary signed URL for the private avatar. the query only runs when an avatar exists
   const avatarUrlQuery = useQuery({
     queryKey: ["file-signed-url", profile?.avatarFileId],
     queryFn: () => getFileSignedUrl(profile!.avatarFileId!),
@@ -135,7 +125,6 @@ export function Profile() {
   });
 
   // Fetch resume metadata so the UI can display the actual uploaded filename and file type
-
   const resumeMetadataQuery = useQuery({
     queryKey: ["file-metadata", profile?.resumeFileId],
     queryFn: () => getFileMetadata(profile!.resumeFileId!),
@@ -153,7 +142,6 @@ export function Profile() {
   };
 
   // ask the shell to handle logout - The candidate MFE doesn't call the logout API directly
-
   const handleLogout = async () => {
     try {
       await window.__AUTH_BRIDGE__?.logout();
@@ -178,7 +166,6 @@ export function Profile() {
     mutationFn: uploadResume, // uploads/replaces the candidate's resume
 
     // the profile now contains the new resumeFileId, so refresh the cached profile
-
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["profile"],
@@ -200,11 +187,10 @@ export function Profile() {
     if (!file) return;
 
     // allow PDF, old word .doc, and modern word .docx
-
     const allowedTypes = [
       "application/pdf",
       "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // browser's MIME type for a .docx word document
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ];
 
     if (!allowedTypes.includes(file.type)) {
@@ -226,7 +212,6 @@ export function Profile() {
   const extension = resumeMetadataQuery.data?.extension?.toLowerCase();
 
   // generate a temporary signed URL for the private resume and open the resume in a new browser tab
-
   const handleResumeOpen = async () => {
     if (!profile?.resumeFileId) return;
 
@@ -249,28 +234,26 @@ export function Profile() {
   };
 
   // Loading state.
-
   if (isLoading) {
     return (
       <div className="mx-auto max-w-5xl">
-        <div className="rounded-2xl border border-[#2F2B27] bg-[#1B1917] p-8">
-          <p className="text-sm text-[#918A82]">Loading your profile...</p>
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <p className="text-sm text-slate-500">Loading your profile...</p>
         </div>
       </div>
     );
   }
 
-  //Error state.
-
+  // Error state.
   if (isError || !profile) {
     return (
       <div className="mx-auto max-w-5xl">
-        <div className="rounded-2xl border border-[#3A2C28] bg-[#1B1917] p-8">
-          <h1 className="text-lg font-semibold text-[#F2EDE4]">
+        <div className="rounded-3xl border border-red-100 bg-white p-8 shadow-sm">
+          <h1 className="text-lg font-bold text-slate-900">
             Profile unavailable
           </h1>
 
-          <p className="mt-2 text-sm text-[#918A82]">
+          <p className="mt-2 text-sm text-slate-500">
             {error instanceof Error
               ? error.message
               : "We could not find your profile."}
@@ -285,7 +268,6 @@ export function Profile() {
     "Candidate";
 
   /* Generate initials for the avatar placeholder */
-
   const initials =
     [profile.firstName, profile.lastName]
       .filter(Boolean)
@@ -294,16 +276,18 @@ export function Profile() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      {/* page header */}
-
+      {/* Page header */}
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-[#B9674B]">Account</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#F2EDE4]">
+          <p className="text-sm font-medium text-violet-600">Account</p>
+
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
             Your Profile
           </h1>
 
-          <p>Manage your personal and professional information</p>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            Manage your personal and professional information
+          </p>
         </div>
 
         <div className="flex gap-2">
@@ -326,7 +310,7 @@ export function Profile() {
                     linkedin: profile.linkedin ?? "",
                   });
                 }}
-                className="cursor-pointer rounded-lg border border-[#3A3530] px-4 py-2.5 text-sm font-medium text-[#B7AFA6] transition hover:bg-[#24211E] hover:text-[#F2EDE4]"
+                className="cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -335,7 +319,7 @@ export function Profile() {
                 type="button"
                 onClick={handleSave}
                 disabled={updateProfileMutation.isPending}
-                className="cursor-pointer rounded-lg bg-[#B9674B] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#A85C42] disabled:cursor-not-allowed disabled:opacity-60"
+                className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
               </button>
@@ -344,7 +328,7 @@ export function Profile() {
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="cursor-pointer rounded-lg bg-[#B9674B] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#A85C42]"
+              className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl"
             >
               Edit Profile
             </button>
@@ -353,13 +337,11 @@ export function Profile() {
       </section>
 
       {/* Profile header card */}
-
-      <section className="rounded-2xl border border-[#2F2B27] bg-[#1B1917] p-6 sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
           {/* Avatar */}
-
           <div className="relative h-24 w-24 shrink-0">
-            <div className="flex h-24 w-24 overflow-hidden items-center justify-center rounded-full bg-[#B9674B] text-2xl font-semibold text-[#F8F3EC]">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-2xl font-semibold text-white">
               {avatarUrlQuery.data ? (
                 <img
                   src={avatarUrlQuery.data || undefined}
@@ -373,15 +355,7 @@ export function Profile() {
 
             <label
               htmlFor="avatar-upload"
-              className="absolute bottom-0 right-0
-      flex h-8 w-8 cursor-pointer
-      items-center justify-center
-      rounded-full
-      border-2 border-[#1B1917]
-      bg-[#B9674B]
-      text-white
-      transition
-      hover:bg-[#A85C42]"
+              className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-violet-600 text-white transition hover:bg-violet-700"
             >
               {avatarMutation.isPending ? (
                 <span className="text-xs">...</span>
@@ -401,17 +375,14 @@ export function Profile() {
           </div>
 
           {/* Basic information */}
-
           <div className="min-w-0">
-            <h2 className="text-2xl font-semibold text-[#F2EDE4]">
-              {fullName}
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-900">{fullName}</h2>
 
             {profile.headline && (
-              <p className="mt-1 text-sm text-[#B7AFA6]">{profile.headline}</p>
+              <p className="mt-1 text-sm text-slate-500">{profile.headline}</p>
             )}
 
-            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[#817A72]">
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
               {profile.email && (
                 <span className="flex items-center gap-2">
                   <IoIosMail className="h-4 w-4" />
@@ -430,15 +401,12 @@ export function Profile() {
         </div>
       </section>
 
-      {/* personal information */}
-
-      <section className="rounded-2xl border border-[#2F2B27] bg-[#1B1917]">
-        <div className="border-b border-[#2F2B27] px-6 py-5">
-          <h2 className="text-lg font-semibold text-[#F2EDE4]">
+      {/* Personal information */}
+      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <h2 className="text-lg font-bold text-slate-900">
             Personal Information
           </h2>
-
-          <p className="mt-1 text-sm text-[#817A72]"></p>
         </div>
 
         <div className="grid gap-6 p-6 sm:grid-cols-2">
@@ -497,15 +465,12 @@ export function Profile() {
         </div>
       </section>
 
-      {/* Profile Information */}
-
-      <section className="rounded-2xl border border-[#2F2B27] bg-[#1B1917]">
-        <div className="border-b border-[#2F2B27] px-6 py-5">
-          <h2 className="text-lg font-semibold text-[#F2EDE4]">
+      {/* Professional Information */}
+      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <h2 className="text-lg font-bold text-slate-900">
             Professional Information
           </h2>
-
-          <p className="mt-1 text-sm text-[#817A72]"></p>
         </div>
 
         <div className="space-y-6 p-6">
@@ -519,7 +484,7 @@ export function Profile() {
           />
 
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#706A63]">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
               Bio
             </p>
 
@@ -531,10 +496,10 @@ export function Profile() {
                 }
                 rows={5}
                 placeholder="Tell recruiters about yourself..."
-                className="mt-2 w-full resize-none rounded-lg border border-[#3A3530] bg-[#201E1B] p-3 text-sm text-[#F2EDE4] outline-none focus:border-[#B9674B]"
+                className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
               />
             ) : (
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#C8C0B7]">
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
                 {profile.bio || "No bio added yet."}
               </p>
             )}
@@ -565,12 +530,11 @@ export function Profile() {
       </section>
 
       {/* Resume */}
+      <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <h2 className="text-lg font-bold text-slate-900">Resume</h2>
 
-      <section className="rounded-2xl border border-[#2F2B27] bg-[#1B1917]">
-        <div className="border-b border-[#2F2B27] px-6 py-5">
-          <h2 className="text-lg font-semibold text-[#F2EDE4]">Resume</h2>
-
-          <p className="mt-1 text-sm text-[#817A72]">
+          <p className="mt-1 text-sm text-slate-500">
             Your resume will be used for interview preparation and future
             AI-powered features.
           </p>
@@ -578,18 +542,15 @@ export function Profile() {
 
         {profile.resumeFileId ? (
           // resume exists - show the uploaded file
-
-          <div className="flex items-center justify-between gap-4 border-t border-[#2F2B27] p-6">
+          <div className="flex items-center justify-between gap-4 border-t border-slate-100 p-6">
             {/* clicking the file opens the resume in a new browser tab */}
-
             <button
               type="button"
               onClick={handleResumeOpen}
-              className="flex min-w-0 items-center gap-4 text-left transition hover:opacity-80 cursor-pointer"
+              className="flex min-w-0 cursor-pointer items-center gap-4 text-left transition hover:opacity-80"
             >
               {/* file type indicator */}
-
-              <div className="flex h-16 w-14 shrink-0 items-center justify-center rounded-md bg-[#D71920] text-sm font-bold text-white">
+              <div className="flex h-16 w-14 shrink-0 items-center justify-center rounded-xl bg-red-50 text-sm font-bold text-red-600">
                 {extension === ".pdf"
                   ? "PDF"
                   : extension === ".doc"
@@ -600,28 +561,26 @@ export function Profile() {
               </div>
 
               {/* resume filename */}
-
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[#F2EDE4]">
+                <p className="truncate text-sm font-semibold text-slate-900">
                   {resumeMetadataQuery.data?.originalName ?? "Resume"}
                 </p>
-                <p className="mt-1 text-xs text-[#817A72]">
+
+                <p className="mt-1 text-xs text-slate-400">
                   Click to open resume
                 </p>
               </div>
             </button>
 
             {/* replace resume button */}
-
             <label
               htmlFor="resume-upload"
-              className="shrink-0 cursor-pointer rounded-lg border border-[#484039] px-5 py-3 text-sm font-medium text-[#F2EDE4] transition hover:bg-[#24211E]"
+              className="shrink-0 cursor-pointer rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50"
             >
-              {resumeMutation.isPending ? "Uploading..." : "Upload Resume "}
+              {resumeMutation.isPending ? "Uploading..." : "Upload Resume"}
             </label>
 
             {/* hidden file input */}
-
             <input
               id="resume-upload"
               type="file"
@@ -633,28 +592,26 @@ export function Profile() {
           </div>
         ) : (
           // no resume exists - show the upload state
-
-          <div className="flex items-center justify-between gap-4 border-t border-[#2F2B27] p-6">
+          <div className="flex flex-col items-start justify-between gap-4 border-t border-slate-100 p-6 sm:flex-row sm:items-center">
             <div>
-              <h3 className="text-sm font-semibold text-[#F2EDE4]">
+              <h3 className="text-sm font-bold text-slate-900">
                 No resume uploaded
               </h3>
-              <p className="mt-1 text-sm text-[#817A72]">
+
+              <p className="mt-1 text-sm text-slate-500">
                 Upload your latest resume to complete your profile
               </p>
             </div>
 
             {/* upload resume button */}
-
             <label
               htmlFor="resume-upload"
-              className="cursor-pointer rounded-lg bg-[#B9674B] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#A85C42]"
+              className="cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl"
             >
               {resumeMutation.isPending ? "Uploading..." : "Upload Resume"}
             </label>
 
             {/* hidden file input */}
-
             <input
               id="resume-upload"
               type="file"
@@ -667,56 +624,50 @@ export function Profile() {
         )}
       </section>
 
-      {/* logout */}
+      {/* Account actions */}
+      <div className="flex items-center justify-between pt-2">
+        {/* Delete account */}
 
-      <div className="flex justify-end pt-2">
+        <div className="group relative">
+          <button
+            type="button"
+            onClick={() => requestDeletionMutation.mutate()}
+            disabled={requestDeletionMutation.isPending}
+            className="flex cursor-pointer items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Delete Account"
+          >
+            <span className="text-lg leading-none">×</span>
+
+            {requestDeletionMutation.isPending
+              ? "Sending OTP..."
+              : "Delete Account"}
+          </button>
+
+          {/* Delete account tooltip */}
+          <div className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 hidden w-64 rounded-xl bg-slate-900 px-3 py-2 text-xs leading-5 text-white shadow-lg group-hover:block">
+            <span className="font-semibold">Delete account:</span> Your account
+            will be disabled after OTP verification.
+          </div>
+        </div>
+
+        {/* Sign out */}
         <button
           type="button"
           onClick={handleLogout}
-          className="flex cursor-pointer items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
+          className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100"
         >
           <FiLogOut className="h-4 w-4" />
           Sign Out
         </button>
       </div>
 
-        {/* Account actions */}
-<div className="space-y-4 pt-2">
-  {/* Delete account */}
-  <div className="flex flex-col gap-4 rounded-xl border border-red-500/20 bg-red-500/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h3 className="text-sm font-semibold text-[#F2EDE4]">
-        Delete account
-      </h3>
-
-      <p className="mt-1 text-sm text-[#817A72]">
-        Your account will be disabled after OTP verification.
-      </p>
-    </div>
-
-    <button
-      type="button"
-      onClick={() => requestDeletionMutation.mutate()}
-      disabled={requestDeletionMutation.isPending}
-      className="shrink-0 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {requestDeletionMutation.isPending
-        ? "Sending OTP..."
-        : "Delete Account"}
-    </button>
-  </div>
-
-</div>
-
-{/* Account deletion OTP modal */}
-
-<AccountDeletionModal
-  open={isDeleteModalOpen}
-  loading={verifyDeletionMutation.isPending}
-  onClose={() => setIsDeleteModalOpen(false)}
-  onVerify={(otp) => verifyDeletionMutation.mutate(otp)}
-/>
-
+      {/* Account deletion OTP modal */}
+      <AccountDeletionModal
+        open={isDeleteModalOpen}
+        loading={verifyDeletionMutation.isPending}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onVerify={(otp) => verifyDeletionMutation.mutate(otp)}
+      />
     </div>
   );
 }
@@ -730,14 +681,14 @@ interface ProfileFieldProps {
 function ProfileField({ label, value, icon }: ProfileFieldProps) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#706A63]">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
         {label}
       </p>
 
       <div className="mt-2 flex items-center gap-2">
-        {icon && <span className="text-[#817A72]">{icon}</span>}
+        {icon && <span className="text-slate-400">{icon}</span>}
 
-        <p className="text-sm text-[#D7CFC5]">{value || "Not provided"}</p>
+        <p className="text-sm text-slate-700">{value || "Not provided"}</p>
       </div>
     </div>
   );
@@ -764,25 +715,25 @@ function EditableProfileField({
 }: EditableProfileFieldProps) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#706A63]">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
         {label}
       </p>
 
       {editing ? (
         <div className="mt-2 flex items-center gap-2">
-          {icon && <span className="text-[#817A72]">{icon}</span>}
+          {icon && <span className="text-slate-400">{icon}</span>}
 
           <input
             value={formValue ?? ""}
             onChange={(event) => onChange(field, event.target.value)}
-            className="h-10 w-full rounded-lg border border-[#3A3530] bg-[#201E1B] px-3 text-sm text-[#F2EDE4] outline-none transition focus:border-[#B9674B]"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
           />
         </div>
       ) : (
         <div className="mt-2 flex items-center gap-2">
-          {icon && <span className="text-[#817A72]">{icon}</span>}
+          {icon && <span className="text-slate-400">{icon}</span>}
 
-          <p className="text-sm text-[#D7CFC5]">{value || "Not provided"}</p>
+          <p className="text-sm text-slate-700">{value || "Not provided"}</p>
         </div>
       )}
     </div>

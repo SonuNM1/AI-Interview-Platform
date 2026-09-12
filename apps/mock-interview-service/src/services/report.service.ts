@@ -38,9 +38,7 @@ export const getOrGenerateMockInterviewReport = async (
  * The AI evaluates qualitative performance only. The backend calculates
  * overallScore from the stored question scores to guarantee a 0–10 value.
  */
-export const generateMockInterviewReport = async (
-  mockInterviewId: string,
-) => {
+export const generateMockInterviewReport = async (mockInterviewId: string) => {
   const questions = await MockInterviewQuestion.find({
     mockInterviewId,
   }).sort({
@@ -51,21 +49,16 @@ export const generateMockInterviewReport = async (
     throw new Error("No interview questions found");
   }
 
-  /*
-   * Calculate the overall score on the server.
-   *
-   * Every question score is already on a 0–10 scale.
-   * Skipped questions have score 0, so they are naturally included.
-   */
-  const totalScore = questions.reduce(
-    (sum, question) => sum + (question.score ?? 0),
-    0,
-  );
+  const totalScore = questions.reduce((sum, question) => {
+    const score = Math.min(10, Math.max(0, question.score ?? 0));
+
+    return sum + score;
+  }, 0);
 
   const overallScore =
-    questions.length > 0
-      ? totalScore / questions.length
-      : 0;
+  questions.length > 0
+    ? totalScore / questions.length
+    : 0;
 
   const interviewData = questions
     .map(
@@ -161,22 +154,11 @@ Generate the final interview report.
 
   const report = JSON.parse(result);
 
-  /*
-   * Return the backend-calculated score together with the AI-generated
-   * qualitative report.
-   */
   return {
     overallScore: Number(overallScore.toFixed(1)),
-    strengths: Array.isArray(report.strengths)
-      ? report.strengths
-      : [],
-    weaknesses: Array.isArray(report.weaknesses)
-      ? report.weaknesses
-      : [],
-    summary:
-      typeof report.summary === "string"
-        ? report.summary
-        : "",
+    strengths: Array.isArray(report.strengths) ? report.strengths : [],
+    weaknesses: Array.isArray(report.weaknesses) ? report.weaknesses : [],
+    summary: typeof report.summary === "string" ? report.summary : "",
     recommendation:
       report.recommendation === "Strong" ||
       report.recommendation === "Good" ||

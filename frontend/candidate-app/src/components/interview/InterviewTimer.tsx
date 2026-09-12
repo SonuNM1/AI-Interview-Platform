@@ -55,8 +55,8 @@ export function InterviewTimer({
     <span
       className={
         remaining <= 60 * 1000
-          ? "font-semibold text-red-400"
-          : ""
+          ? "font-semibold text-red-600"
+          : "font-semibold text-slate-700"
       }
     >
       {String(minutes).padStart(2, "0")}:

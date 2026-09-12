@@ -1,15 +1,15 @@
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
   CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Home,
+  MessageCircle,
   User,
-  Users,
   X,
 } from "lucide-react";
-import { Mic2 } from "lucide-react";
+import { getConversations } from "../services/chat.api";
 
 interface CandidateSidebarProps {
   isOpen: boolean;
@@ -25,41 +25,42 @@ export function CandidateSidebar({
   const currentPath = window.location.pathname;
 
   const [collapsed, setCollapsed] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const conversations = await getConversations();
+
+        const totalUnread = conversations.reduce(
+          (total, conversation) => total + (conversation.unreadCount ?? 0),
+          0,
+        );
+
+        setUnreadCount(totalUnread);
+      } catch (error) {
+        console.error("Failed to load chat unread count:", error);
+      }
+    };
+
+    loadUnreadCount();
+  }, [currentPath]);
+
+  // Mentorship starts expanded whenever the user is inside
+  // the mentorship marketplace or chat section.
+  const [mentorshipOpen, setMentorshipOpen] = useState(
+    currentPath.startsWith("/candidate/mentors") ||
+      currentPath.startsWith("/candidate/chat"),
+  );
 
   const navigate = (path: string) => {
     onNavigate(path);
     onClose();
   };
 
-  const navigationItems = [
-    {
-      label: "Dashboard",
-      path: "/candidate",
-      icon: Home,
-    },
-    {
-      label: "Interviews",
-      path: "/candidate/interviews",
-      icon: CalendarDays,
-    },
-    {
-      label: "Mock Interview",
-      path: "/candidate/mock-interview",
-      icon: Mic2,
-    },
-    {
-      // Mentorship remains the main marketplace entry point.
-      label: "Mentorship",
-      path: "/candidate/mentors",
-      icon: Users,
-    },
-  ];
-
   return (
     <>
-      {/* =========================================================
-          MOBILE BACKDROP
-      ========================================================= */}
+      {/* Mobile backdrop */}
       {isOpen && (
         <button
           type="button"
@@ -76,9 +77,7 @@ export function CandidateSidebar({
         />
       )}
 
-      {/* =========================================================
-          SIDEBAR
-      ========================================================= */}
+      {/* Sidebar */}
       <aside
         className={`
           fixed
@@ -105,9 +104,7 @@ export function CandidateSidebar({
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        {/* =======================================================
-            HEADER
-        ======================================================= */}
+        {/* Header */}
         <div
           className={`
             flex
@@ -126,6 +123,7 @@ export function CandidateSidebar({
                 min-w-0
                 flex-1
                 truncate
+                cursor-pointer
                 text-left
                 text-[17px]
                 font-bold
@@ -140,19 +138,14 @@ export function CandidateSidebar({
           {/* Desktop collapse */}
           <button
             type="button"
-            onClick={() =>
-              setCollapsed((value) => !value)
-            }
-            aria-label={
-              collapsed
-                ? "Expand sidebar"
-                : "Collapse sidebar"
-            }
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="
               hidden
               h-9
               w-9
               shrink-0
+              cursor-pointer
               items-center
               justify-center
               rounded-xl
@@ -180,6 +173,7 @@ export function CandidateSidebar({
               h-9
               w-9
               shrink-0
+              cursor-pointer
               items-center
               justify-center
               rounded-xl
@@ -194,9 +188,7 @@ export function CandidateSidebar({
           </button>
         </div>
 
-        {/* =======================================================
-            NAVIGATION
-        ======================================================= */}
+        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-6">
           {!collapsed && (
             <p
@@ -215,39 +207,193 @@ export function CandidateSidebar({
           )}
 
           <div className="space-y-1">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <SidebarItem
-                  key={item.path}
-                  label={item.label}
-                  collapsed={collapsed}
-                  active={
-                    item.path === "/candidate"
-                      ? currentPath === "/candidate"
-                      : currentPath.startsWith(item.path)
-                  }
-                  icon={
-                    <Icon
-                      className="
-                        !h-[19px]
-                        !w-[19px]
-                        shrink-0
-                      "
-                      strokeWidth={1.7}
-                    />
-                  }
-                  onClick={() => navigate(item.path)}
+            {/* Dashboard */}
+            <SidebarItem
+              label="Dashboard"
+              collapsed={collapsed}
+              active={currentPath === "/candidate"}
+              icon={
+                <Home
+                  className="!h-[19px] !w-[19px] shrink-0"
+                  strokeWidth={1.7}
                 />
-              );
-            })}
+              }
+              onClick={() => navigate("/candidate")}
+            />
+
+            {/* Interviews */}
+            <SidebarItem
+              label="Interviews"
+              collapsed={collapsed}
+              active={currentPath.startsWith("/candidate/interviews")}
+              icon={
+                <CalendarDays
+                  className="!h-[19px] !w-[19px] shrink-0"
+                  strokeWidth={1.7}
+                />
+              }
+              onClick={() => navigate("/candidate/interviews")}
+            />
+
+            {/* Mock Interview */}
+            <SidebarItem
+              label="Mock Interview"
+              collapsed={collapsed}
+              active={currentPath.startsWith("/candidate/mock-interview")}
+              icon={<span className="text-[18px] leading-none">🎙️</span>}
+              onClick={() => navigate("/candidate/mock-interview")}
+            />
+
+            {/* =================================================
+                MENTORSHIP
+            ================================================= */}
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  // When sidebar is collapsed, clicking the icon
+                  // directly opens the mentorship marketplace.
+                  if (collapsed) {
+                    navigate("/candidate/mentors");
+                    return;
+                  }
+
+                  setMentorshipOpen((value) => !value);
+                }}
+                className={`
+                  group
+                  flex
+                  w-full
+                  cursor-pointer
+                  items-center
+                  rounded-xl
+                  text-left
+                  text-[14px]
+                  font-medium
+                  transition-all
+                  duration-150
+
+                  focus-visible:outline-none
+                  focus-visible:ring-2
+                  focus-visible:ring-violet-500/30
+
+                  ${
+                    currentPath.startsWith("/candidate/mentors") ||
+                    currentPath.startsWith("/candidate/chat")
+                      ? "bg-gradient-to-r from-violet-50 to-indigo-50 text-slate-900"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  }
+
+                  ${
+                    collapsed
+                      ? "justify-center px-2 py-3"
+                      : "gap-3 px-3 py-[11px]"
+                  }
+                `}
+              >
+                <span
+                  className={`
+                    flex
+                    h-5
+                    w-5
+                    shrink-0
+                    items-center
+                    justify-center
+                    ${
+                      currentPath.startsWith("/candidate/mentors") ||
+                      currentPath.startsWith("/candidate/chat")
+                        ? "text-violet-600"
+                        : "text-slate-400 group-hover:text-violet-600"
+                    }
+                  `}
+                >
+                  <MessageCircle
+                    className="!h-[19px] !w-[19px]"
+                    strokeWidth={1.7}
+                  />
+                </span>
+
+                {!collapsed && (
+                  <>
+                    <span className="flex-1">Mentorship</span>
+
+                    <ChevronDown
+                      className={`
+                        h-4
+                        w-4
+                        transition-transform
+                        ${mentorshipOpen ? "rotate-180" : ""}
+                      `}
+                    />
+                  </>
+                )}
+              </button>
+
+              {/* Mentorship children */}
+              {!collapsed && mentorshipOpen && (
+                <div className="ml-8 mt-1 space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/candidate/mentors")}
+                    className={`
+                      flex
+                      w-full
+                      cursor-pointer
+                      items-center
+                      rounded-lg
+                      px-3
+                      py-2
+                      text-left
+                      text-xs
+                      font-medium
+                      transition-colors
+                      ${
+                        currentPath === "/candidate/mentors"
+                          ? "bg-violet-50 text-violet-700"
+                          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                      }
+                    `}
+                  >
+                    Discover Mentors
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/candidate/chat")}
+                    className={`
+    flex
+    w-full
+    cursor-pointer
+    items-center
+    rounded-lg
+    px-3
+    py-2
+    text-left
+    text-xs
+    font-medium
+    transition-colors
+    ${
+      currentPath.startsWith("/candidate/chat")
+        ? "bg-violet-50 text-violet-700"
+        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+    }
+  `}
+                  >
+                    <span className="flex-1">My Mentors / Chats</span>
+
+                    {unreadCount > 0 && (
+                      <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[10px] font-bold text-white">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </nav>
 
-        {/* =======================================================
-            ACCOUNT
-        ======================================================= */}
+        {/* Account */}
         <div className="shrink-0 border-t border-slate-200 px-3 py-4">
           {!collapsed && (
             <p
@@ -268,22 +414,14 @@ export function CandidateSidebar({
           <SidebarItem
             label="Profile"
             collapsed={collapsed}
-            active={currentPath.startsWith(
-              "/candidate/profile",
-            )}
+            active={currentPath.startsWith("/candidate/profile")}
             icon={
               <User
-                className="
-                  !h-[19px]
-                  !w-[19px]
-                  shrink-0
-                "
+                className="!h-[19px] !w-[19px] shrink-0"
                 strokeWidth={1.7}
               />
             }
-            onClick={() =>
-              navigate("/candidate/profile")
-            }
+            onClick={() => navigate("/candidate/profile")}
           />
         </div>
       </aside>
@@ -303,12 +441,6 @@ interface SidebarItemProps {
   onClick: () => void;
 }
 
-/*
- * Individual sidebar item.
- *
- * Only visual styling is handled here.
- * Navigation behaviour remains unchanged.
- */
 function SidebarItem({
   label,
   collapsed,
@@ -338,11 +470,7 @@ function SidebarItem({
         focus-visible:ring-2
         focus-visible:ring-violet-500/30
 
-        ${
-          collapsed
-            ? "justify-center px-2 py-3"
-            : "gap-3 px-3 py-[11px]"
-        }
+        ${collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-[11px]"}
 
         ${
           active
@@ -351,7 +479,6 @@ function SidebarItem({
         }
       `}
     >
-      {/* Icon */}
       <span
         className={`
           flex
@@ -373,12 +500,7 @@ function SidebarItem({
         {icon}
       </span>
 
-      {/* Label */}
-      {!collapsed && (
-        <span className="truncate">
-          {label}
-        </span>
-      )}
+      {!collapsed && <span className="truncate">{label}</span>}
     </button>
   );
 }

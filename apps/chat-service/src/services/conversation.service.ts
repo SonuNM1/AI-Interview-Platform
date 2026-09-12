@@ -1,5 +1,6 @@
 import Conversation, { ConversationDocument, ConversationType } from "../models/Conversation.model.js"
 import { hasMentorshipAccess } from "./mentorship-access.service.js";
+import Message from "../models/message.model.js"
 
 // creating a new conversation or returning the existing one 
 
@@ -49,14 +50,28 @@ export const createConversationService = async (
 // returns all conversations for a user 
 
 export const getUserConversationsService = async (
-    userId: string
-): Promise<ConversationDocument[]> => {
+  userId: string,
+) => {
+  const conversations = await Conversation.find({
+    participants: userId,
+  })
+    .sort({
+      updatedAt: -1,
+    })
+    .lean();
 
-    return Conversation
-        .find({
-            participants: userId
-        })
-        .sort({
-            updatedAt: -1
-        });
+  return Promise.all(
+    conversations.map(async (conversation) => {
+      const unreadCount = await Message.countDocuments({
+        conversationId: conversation._id,
+        senderId: { $ne: userId },
+        readBy: { $ne: userId },
+      });
+
+      return {
+        ...conversation,
+        unreadCount,
+      };
+    }),
+  );
 };

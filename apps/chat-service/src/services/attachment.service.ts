@@ -1,5 +1,7 @@
-import { uploadAttachment } from "./file-service.client.js";
-
+import {
+  getAttachmentSignedUrl,
+  uploadAttachment,
+} from "./file-service.client.js";
 // uploads an attachment using File Service 
 
 export const uploadAttachmentService = async (
@@ -14,4 +16,13 @@ export const uploadAttachmentService = async (
 
     return uploadedFile;
 
+};
+
+// Generates a temporary signed URL for a chat attachment.
+
+export const getAttachmentSignedUrlService = async (
+  fileId: string,
+  userId: string,
+) => {
+  return await getAttachmentSignedUrl(fileId, userId);
 };

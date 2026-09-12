@@ -17,8 +17,8 @@ interface MockInterviewSetupProps {
 }
 
 /**
- * Allows the candidate to upload a resume and start a mock interview*/
-
+ * Allows the candidate to upload a resume and start a mock interview
+ */
 export function MockInterviewSetup({
   resumeFileName,
   isUploading,
@@ -37,7 +37,9 @@ export function MockInterviewSetup({
   /**
    * Validates the selected PDF before starting RAG processing.
    */
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -55,14 +57,14 @@ export function MockInterviewSetup({
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#2F2B27] bg-[#1B1917]">
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       {/* Header */}
-      <div className="border-b border-[#2F2B27] px-6 py-5">
-        <h2 className="text-lg font-semibold text-[#F2EDE4]">
+      <div className="border-b border-slate-200 px-6 py-5">
+        <h2 className="text-lg font-bold text-slate-900">
           Start a Mock Interview
         </h2>
 
-        <p className="mt-1 text-sm text-[#817A72]">
+        <p className="mt-1 text-sm text-slate-500">
           Upload your resume to get personalized technical questions.
         </p>
       </div>
@@ -73,16 +75,16 @@ export function MockInterviewSetup({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="group flex w-full cursor-pointer items-center gap-4 rounded-xl border border-dashed border-[#3A342F] bg-[#181715] px-5 py-6 text-left transition hover:border-[#B9674B] hover:bg-[#1D1A18] disabled:cursor-not-allowed disabled:opacity-70"
+          className="group flex w-full cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-6 text-left transition hover:border-violet-300 hover:bg-violet-50/50 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#2A2420]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100">
             {isUploading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-[#D98260]" />
+              <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
             ) : isResumeReady ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
             ) : (
               <Upload
-                className="h-5 w-5 text-[#D98260]"
+                className="h-5 w-5 text-violet-600"
                 strokeWidth={1.8}
               />
             )}
@@ -91,31 +93,31 @@ export function MockInterviewSetup({
           <div className="min-w-0 flex-1">
             {isUploading ? (
               <>
-                <p className="text-sm font-medium text-[#F2EDE4]">
+                <p className="text-sm font-semibold text-slate-900">
                   Preparing resume...
                 </p>
 
-                <p className="mt-1 truncate text-xs text-[#817A72]">
+                <p className="mt-1 truncate text-xs text-slate-400">
                   {resumeFileName}
                 </p>
               </>
             ) : isResumeReady ? (
               <>
-                <p className="text-sm font-medium text-[#F2EDE4]">
+                <p className="text-sm font-semibold text-slate-900">
                   Resume ready
                 </p>
 
-                <p className="mt-1 truncate text-xs text-[#817A72]">
+                <p className="mt-1 truncate text-xs text-slate-400">
                   {resumeFileName}
                 </p>
               </>
             ) : (
               <>
-                <p className="text-sm font-medium text-[#F2EDE4]">
+                <p className="text-sm font-semibold text-slate-900">
                   Upload resume
                 </p>
 
-                <p className="mt-1 text-xs text-[#817A72]">
+                <p className="mt-1 text-xs text-slate-400">
                   PDF only
                 </p>
               </>
@@ -123,7 +125,7 @@ export function MockInterviewSetup({
           </div>
 
           {!isUploading && (
-            <span className="shrink-0 text-xs font-medium text-[#D98260]">
+            <span className="shrink-0 text-xs font-semibold text-violet-600">
               {isResumeReady ? "Change" : "Choose file"}
             </span>
           )}
@@ -138,18 +140,23 @@ export function MockInterviewSetup({
         />
 
         {/* Small interview details */}
-        <div className="mt-5 flex items-center gap-6 text-xs text-[#817A72]">
+        <div className="mt-5 flex items-center gap-6 text-xs text-slate-400">
           <span>
-            <span className="text-[#D7CFC5]">5</span> questions
+            <span className="font-medium text-slate-700">
+              5
+            </span>{" "}
+            questions
           </span>
 
-          <span className="h-1 w-1 rounded-full bg-[#4A443E]" />
+          <span className="h-1 w-1 rounded-full bg-slate-300" />
 
           <span>
-            <span className="text-[#D7CFC5]">Technical</span>
+            <span className="font-medium text-slate-700">
+              Technical
+            </span>
           </span>
 
-          <span className="h-1 w-1 rounded-full bg-[#4A443E]" />
+          <span className="h-1 w-1 rounded-full bg-slate-300" />
 
           <span>Resume based</span>
         </div>
@@ -159,7 +166,7 @@ export function MockInterviewSetup({
           type="button"
           onClick={onStart}
           disabled={!canStart}
-          className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#B9674B] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#A85C42] disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Play className="h-4 w-4" />
 

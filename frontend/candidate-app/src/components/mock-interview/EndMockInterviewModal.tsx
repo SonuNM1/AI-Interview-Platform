@@ -22,18 +22,17 @@ export function EndMockInterviewModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-[#2F2B27] bg-[#1B1917] p-6 shadow-2xl">
-
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#7A3327]/20">
-          <AlertTriangle className="h-5 w-5 text-red-400" />
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50">
+          <AlertTriangle className="h-5 w-5 text-red-600" />
         </div>
 
-        <h2 className="mt-4 text-lg font-semibold text-[#F2EDE4]">
+        <h2 className="mt-4 text-lg font-bold text-slate-900">
           End Mock Interview?
         </h2>
 
-        <p className="mt-2 text-sm leading-6 text-[#817A72]">
+        <p className="mt-2 text-sm leading-6 text-slate-500">
           Your interview will end now. Your report will be
           generated using the questions you have answered or
           skipped so far.
@@ -44,7 +43,7 @@ export function EndMockInterviewModal({
             type="button"
             onClick={onCancel}
             disabled={isEnding}
-            className="cursor-pointer rounded-lg border border-[#403A34] px-4 py-2.5 text-sm font-medium text-[#D7CFC5] transition hover:bg-[#24211E] disabled:opacity-50"
+            className="cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Continue Interview
           </button>
@@ -53,7 +52,7 @@ export function EndMockInterviewModal({
             type="button"
             onClick={onConfirm}
             disabled={isEnding}
-            className="cursor-pointer rounded-lg bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="cursor-pointer rounded-xl bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isEnding
               ? "Ending..."

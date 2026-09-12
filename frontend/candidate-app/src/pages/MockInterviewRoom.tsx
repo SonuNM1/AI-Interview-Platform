@@ -708,7 +708,7 @@ export function MockInterviewRoom() {
   if (interviewQuery.isLoading || startMutation.isPending) {
     return (
       <FullScreenState
-        icon={<Loader2 className="h-6 w-6 animate-spin text-[#D98260]" />}
+        icon={<Loader2 className="h-6 w-6 animate-spin text-violet-600" />}
         message="Preparing your mock interview..."
       />
     );
@@ -728,13 +728,13 @@ export function MockInterviewRoom() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#141311] text-[#F2EDE4]">
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-50 text-slate-900">
       {/* Header */}
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#2F2B27] px-4 sm:px-6">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4 sm:px-6">
         <div>
           <p className="text-sm font-semibold">Mock Interview</p>
 
-          <p className="text-xs text-[#6F6962]">
+          <p className="text-xs text-slate-400">
             Question {questionNumber} of 5
           </p>
         </div>
@@ -755,14 +755,14 @@ export function MockInterviewRoom() {
         <div className="w-full max-w-3xl">
           {/* Question number */}
           <div className="mb-4 text-center">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#D98260]">
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-600">
               Question {questionNumber}
             </span>
           </div>
 
           {/* Question */}
-          <div className="rounded-2xl border border-[#2F2B27] bg-[#1B1917] px-6 py-10 text-center shadow-2xl sm:px-12">
-            <h1 className="text-xl font-medium leading-9 text-[#F2EDE4] sm:text-2xl">
+          <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center shadow-2xl sm:px-12">
+            <h1 className="text-xl font-medium leading-9 text-slate-900 sm:text-2xl">
               {currentQuestion.question}
             </h1>
           </div>
@@ -774,20 +774,20 @@ export function MockInterviewRoom() {
                 flex h-20 w-20 items-center justify-center rounded-full transition
                 ${
                   isRecording
-                    ? "bg-[#7A3327] ring-4 ring-[#D98260]/20"
-                    : "bg-[#2A2420]"
+                    ? "bg-violet-600 ring-4 ring-[#D98260]/20"
+                    : "bg-gradient-to-br from-violet-50 to-indigo-50"
                 }
               `}
             >
               {isRecording ? (
-                <Mic className="h-8 w-8 text-[#F2EDE4]" />
+                <Mic className="h-8 w-8 text-slate-900" />
               ) : (
-                <MicOff className="h-8 w-8 text-[#D98260]" />
+                <MicOff className="h-8 w-8 text-violet-600" />
               )}
             </div>
 
             {/* Status */}
-            <p className="mt-4 text-sm text-[#A9A29A]">
+            <p className="mt-4 text-sm text-slate-500">
               {isSpeaking
                 ? "AI interviewer is speaking..."
                 : isProcessing
@@ -809,7 +809,7 @@ export function MockInterviewRoom() {
       <button
         type="button"
         onClick={() => void startRecording()}
-        className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#B9674B] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#A85C42]"
+        className="flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:from-violet-700 hover:to-indigo-700"
       >
         <Mic className="h-4 w-4" />
         Start Answer
@@ -820,7 +820,7 @@ export function MockInterviewRoom() {
         type="button"
         onClick={handleSkip}
         disabled={skipMutation.isPending}
-        className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#3A3530] px-5 py-3 text-sm font-medium text-[#817A72] transition hover:border-[#5A514A] hover:text-[#F2EDE4] disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-5 py-3 text-sm font-medium text-slate-500 transition hover:border-violet-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <SkipForward className="h-4 w-4" />
         {skipMutation.isPending
@@ -836,7 +836,7 @@ export function MockInterviewRoom() {
                 type="button"
                 onClick={() => void submitRecording()}
                 disabled={submitMutation.isPending || isProcessing}
-                className="mt-5 flex cursor-pointer items-center gap-2 rounded-lg bg-[#B9674B] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#A85C42] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-5 flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:from-violet-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <MicOff className="h-4 w-4" />
                 Submit Answer
@@ -852,7 +852,7 @@ export function MockInterviewRoom() {
                   type="button"
                   onClick={handleSkip}
                   disabled={skipMutation.isPending}
-                  className="mt-4 flex cursor-pointer items-center gap-2 text-xs font-medium text-[#817A72] transition hover:text-[#F2EDE4] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-500 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <SkipForward className="h-3.5 w-3.5" />
 
@@ -913,8 +913,8 @@ function FullScreenState({
   message: string;
 }) {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#141311]">
-      <div className="flex items-center gap-3 text-sm text-[#817A72]">
+    <div className="fixed inset-0 flex items-center justify-center bg-slate-50">
+      <div className="flex items-center gap-3 text-sm text-slate-500">
         {icon}
         {message}
       </div>

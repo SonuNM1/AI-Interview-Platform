@@ -113,24 +113,24 @@ export function MockInterview() {
   });
 
   return (
-    <div className="min-h-full bg-[#141311] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         {/* Page heading */}
         <div className="mb-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#2A2420]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-200">
               <Mic2
-                className="h-5 w-5 text-[#D98260]"
+                className="h-5 w-5 text-white"
                 strokeWidth={1.8}
               />
             </div>
 
             <div>
-              <h1 className="text-xl font-semibold text-[#F2EDE4]">
+              <h1 className="text-xl font-semibold text-slate-900">
                 Mock Interview
               </h1>
 
-              <p className="mt-1 text-sm text-[#817A72]">
+              <p className="mt-1 text-sm text-slate-500">
               </p>
             </div>
           </div>

@@ -8,12 +8,23 @@ import {
   Star,
 } from "lucide-react";
 import { FaGithub, FaLinkedin } from "react-icons/fa";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   getMentor,
   getMentorAvatarUrl,
   getMentorRatings,
 } from "../../services/mentorship.api";
+import { useState } from "react";
+import { toast } from "sonner";
+import { waitForMentorshipConversation } from "../../services/chat.api";
+import {
+  createMentorshipSubscription,
+  verifyMentorshipSubscriptionPayment,
+} from "../../services/payment.api";
+import {
+  loadRazorpay,
+  type RazorpaySubscriptionOptions,
+} from "../../services/razorpay";
 
 export function MentorProfile() {
   const { mentorId } = useParams<{ mentorId: string }>();
@@ -23,6 +34,80 @@ export function MentorProfile() {
     queryFn: () => getMentor(mentorId!),
     enabled: Boolean(mentorId),
   });
+
+  const navigate = useNavigate();
+
+  const [subscribing, setSubscribing] = useState(false);
+
+  const handleSubscribe = async () => {
+    if (!mentor?.mentorProfile?.mentorshipEnabled || !mentorId) {
+      return;
+    }
+
+    try {
+      setSubscribing(true);
+
+      const razorpayLoaded = await loadRazorpay();
+
+      if (!razorpayLoaded) {
+        toast.error("Unable to load Razorpay Checkout.");
+        setSubscribing(false) ; 
+        return;
+      }
+
+      const subscription = await createMentorshipSubscription(mentorId);
+
+      const razorpay = subscription.data;
+
+      const options: RazorpaySubscriptionOptions = {
+        key: razorpay.keyId,
+        subscription_id: razorpay.razorpaySubscriptionId,
+        name: "AI Interview Platform",
+        description: "Monthly mentorship subscription",
+        handler: async (response) => {
+          try {
+            await verifyMentorshipSubscriptionPayment({
+              razorpaySubscriptionId: response.razorpay_subscription_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+
+            toast.success("Payment successful. Opening your mentor chat...");
+
+            await waitForMentorshipConversation(mentorId);
+
+            navigate(`/candidate/chat/${mentorId}`);
+          } catch (error) {
+            console.error("Mentorship payment verification error:", error);
+
+            toast.error(
+              "Payment was received, but we could not open the mentorship chat yet.",
+            );
+          } finally {
+            setSubscribing(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setSubscribing(false);
+          },
+        },
+      };
+
+      const checkout = new window.Razorpay!(options);
+
+      checkout.open();
+    } catch (error: any) {
+      console.error("Mentorship subscription error:", error);
+
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to start mentorship subscription.",
+      );
+
+      setSubscribing(false);
+    }
+  };
 
   const mentor = mentorQuery.data;
 
@@ -437,7 +522,8 @@ export function MentorProfile() {
 
             <button
               type="button"
-              disabled={!mentor.mentorProfile?.mentorshipEnabled}
+              onClick={handleSubscribe}
+              disabled={!mentor.mentorProfile?.mentorshipEnabled || subscribing}
               className="
                 mt-6
                 flex
@@ -455,12 +541,14 @@ export function MentorProfile() {
                 transition
                 hover:bg-slate-800
                 disabled:cursor-not-allowed
-                disabled:bg-slate-300
+                disabled:bg-slate-300 cursor-pointer
               "
             >
-              {mentor.mentorProfile?.mentorshipEnabled
-                ? "Subscribe"
-                : "Currently unavailable"}
+              {!mentor.mentorProfile?.mentorshipEnabled
+                ? "Currently unavailable"
+                : subscribing
+                  ? "Processing..."
+                  : "Subscribe"}
 
               {mentor.mentorProfile?.mentorshipEnabled && (
                 <ArrowRight size={16} />

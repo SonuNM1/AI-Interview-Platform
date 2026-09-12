@@ -3,10 +3,10 @@ import {
   LayoutDashboard,
   Settings,
   User,
-  MessageCircle,
-  Bell,
+  MessageCircle
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import NotificationBell from "../components/Chat/NotificationBell";
 
 const navigation = [
   {
@@ -113,34 +113,24 @@ export default function MentorLayout() {
         </aside>
 
         {/* Main content */}
+
         <div className="ml-64 flex min-h-screen flex-1 flex-col">
           {/* Topbar */}
+
           <header className="flex h-20 items-center justify-between border-b border-violet-100 bg-white/80 px-8 shadow-sm backdrop-blur-xl">
-            <div className="flex items-center gap-3">
-              {/* Notification bell.
-      The actual notification dropdown will be connected to
-      Notification Service in the next small backend step. */}
-              <button
-                type="button"
-                className="relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-slate-500 transition hover:bg-violet-50 hover:text-violet-600"
-                aria-label="Notifications"
-              >
-                <Bell size={20} />
+            <div className="ml-auto flex items-center gap-3">
+              
+              <NotificationBell />
 
-                {/* Unread count will be populated from Notification Service. */}
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-              </button>
-
-              {/* Profile */}
               <button
-                type="button"
-                onClick={() => navigate(`${mentorBasePath}/profile`)}
-                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-white shadow-lg shadow-violet-200 transition-all hover:-translate-y-0.5 hover:scale-105 hover:shadow-xl"
-                aria-label="Open profile"
-              >
-                <User size={20} />
-              </button>
-            </div>
+    type="button"
+    onClick={() => navigate(`${mentorBasePath}/profile`)}
+    className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-white shadow-lg shadow-violet-200 transition-all hover:-translate-y-0.5 hover:scale-105 hover:shadow-xl"
+    aria-label="Open profile"
+  >
+    <User size={20} />
+  </button>
+</div>
           </header>
 
           {/* Page */}
