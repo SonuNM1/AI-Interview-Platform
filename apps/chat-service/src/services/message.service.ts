@@ -233,7 +233,7 @@ export const sendMessageService = async (
     const uploadedFile = await uploadAttachment(file, senderId);
 
     attachments.push({
-      fileId: uploadedFile._id,
+      fileId: uploadedFile.fileId,
 
       url: uploadedFile.url,
 

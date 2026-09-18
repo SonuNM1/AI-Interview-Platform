@@ -29,7 +29,7 @@ export function AppRoutes() {
 
         <Route
           path="/candidates"
-          element={<Candidates />}
+          // element={<Candidates />}
         />
 
         <Route

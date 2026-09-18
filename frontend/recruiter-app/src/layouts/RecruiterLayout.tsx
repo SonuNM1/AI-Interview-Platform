@@ -10,7 +10,7 @@ export function RecruiterLayout() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen bg-[#151412] text-[#F2EDE4]">
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <RecruiterSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -23,10 +23,12 @@ export function RecruiterLayout() {
           onNavigate={navigate}
         />
 
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
     </div>
   );
 }
+
+export default RecruiterLayout;

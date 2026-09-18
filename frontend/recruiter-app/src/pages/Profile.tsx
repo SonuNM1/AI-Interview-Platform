@@ -17,15 +17,11 @@ import {
   updateMyProfile,
   uploadAvatar,
   getFileSignedUrl,
-  requestAccountDeletion,
-  verifyAccountDeletion,
 } from "../services/user.api";
 import axios from "axios";
-import { AccountDeletionModal } from "../components/AccountDeleltionModal";
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -121,49 +117,6 @@ export default function Profile() {
     uploadAvatarMutation.mutate(file);
   };
 
-  // Requests an OTP before allowing the recruiter to delete the account
-
-  const requestDeletionMutation = useMutation({
-    mutationFn: requestAccountDeletion,
-
-    onSuccess: () => {
-      setIsDeleteModalOpen(true);
-
-      toast.success("Verification OTP sent to your email.");
-    },
-
-    onError: (error) => {
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.message
-        : undefined;
-
-      toast.error(message || "Failed to send account deletion OTP.");
-    },
-  });
-
-  // Verifies the OTP and completes account deletion.
-
-  const verifyDeletionMutation = useMutation({
-    mutationFn: verifyAccountDeletion,
-
-    onSuccess: async () => {
-      setIsDeleteModalOpen(false);
-
-      toast.success("Your account has been deleted.");
-
-      // Authentication is owned by the Shell.
-      await window.__AUTH_BRIDGE__?.logout();
-    },
-
-    onError: (error) => {
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.message
-        : undefined;
-
-      toast.error(message || "Invalid or expired OTP.");
-    },
-  });
-
   const handleLogout = async () => {
     try {
       await window.__AUTH_BRIDGE__?.logout();
@@ -177,8 +130,8 @@ export default function Profile() {
   if (isLoading) {
     return (
       <div className="mx-auto w-full max-w-5xl">
-        <div className="rounded-2xl border border-[#2F2B27] bg-[#181715] p-8">
-          <p className="text-sm text-[#817A72]">Loading profile...</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <p className="text-sm text-slate-500">Loading profile...</p>
         </div>
       </div>
     );
@@ -187,8 +140,10 @@ export default function Profile() {
   if (isError) {
     return (
       <div className="mx-auto w-full max-w-5xl">
-        <div className="rounded-2xl border border-[#2F2B27] bg-[#181715] p-8">
-          <p className="text-sm text-[#D98260]">Failed to load your profile.</p>
+        <div className="rounded-2xl border border-red-100 bg-white p-8 shadow-sm">
+          <p className="text-sm font-medium text-red-600">
+            Failed to load your profile.
+          </p>
         </div>
       </div>
     );
@@ -199,29 +154,29 @@ export default function Profile() {
       {/* Heading */}
 
       <div className="mb-8">
-        <p className="text-sm font-medium text-[#D98260]">Account</p>
+        <p className="text-sm font-semibold text-violet-600">Account</p>
 
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#F2EDE4]">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
           Profile
         </h1>
 
-        <p className="mt-2 text-sm text-[#817A72]">
+        <p className="mt-2 text-sm leading-6 text-slate-500">
           Manage your recruiter profile and account information.
         </p>
       </div>
 
       {/* Profile card */}
 
-      <div className="overflow-hidden rounded-2xl border border-[#2F2B27] bg-[#181715]">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {/* Header */}
 
-        <div className="border-b border-[#2F2B27] px-6 py-6 sm:px-8">
+        <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               {/* Avatar */}
 
               <div className="relative">
-                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#D98260]/10">
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-violet-100 to-indigo-100">
                   {profile?.avatarFileId ? (
                     <img
                       src={avatarUrlQuery.data}
@@ -230,7 +185,7 @@ export default function Profile() {
                     />
                   ) : (
                     <User
-                      className="h-8 w-8 text-[#D98260]"
+                      className="h-8 w-8 text-violet-600"
                       strokeWidth={1.7}
                     />
                   )}
@@ -238,7 +193,7 @@ export default function Profile() {
 
                 <label
                   htmlFor="avatar-upload"
-                  className="absolute bottom-0 right-0 flex opacity-80 h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-[#2F2B27] bg-[#24211E] text-[#A9A29A] transition hover:text-[#F2EDE4]"
+                  className="absolute bottom-0 right-0 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-white bg-white text-slate-500 shadow-sm transition-colors hover:bg-violet-50 hover:text-violet-600"
                 >
                   <Camera className="h-3.5 w-3.5" />
 
@@ -253,8 +208,8 @@ export default function Profile() {
                 </label>
               </div>
 
-              <div>
-                <h2 className="text-lg font-semibold text-[#F2EDE4]">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-slate-900">
                   {profile?.firstName || profile?.lastName
                     ? `${profile.firstName ?? ""} ${
                         profile.lastName ?? ""
@@ -262,7 +217,7 @@ export default function Profile() {
                     : "Recruiter"}
                 </h2>
 
-                <p className="mt-1 text-sm text-[#817A72]">
+                <p className="mt-1 truncate text-sm text-slate-500">
                   {profile?.headline || "Recruiter Account"}
                 </p>
               </div>
@@ -272,7 +227,7 @@ export default function Profile() {
               <button
                 type="button"
                 onClick={handleEdit}
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#D98260] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#C96F4F]"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:shadow-violet-200"
               >
                 <Pencil className="h-4 w-4" />
                 Edit Profile
@@ -283,7 +238,7 @@ export default function Profile() {
                   type="button"
                   onClick={() => setIsEditing(false)}
                   disabled={updateProfileMutation.isPending}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#2F2B27] px-4 py-2 text-sm text-[#A9A29A] hover:bg-[#24211E]"
+                  className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <X className="h-4 w-4" />
                   Cancel
@@ -293,7 +248,7 @@ export default function Profile() {
                   type="button"
                   onClick={handleSave}
                   disabled={updateProfileMutation.isPending}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#B9674B] px-4 py-2 text-sm font-medium text-white hover:bg-[#A85C42] disabled:opacity-50"
+                  className="flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:shadow-violet-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Check className="h-4 w-4" />
                   {updateProfileMutation.isPending ? "Saving..." : "Save"}
@@ -344,12 +299,16 @@ export default function Profile() {
             />
 
             <div>
-              <label className="text-xs text-[#6F6962]">Email</label>
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Email
+              </label>
 
-              <div className="mt-2 flex items-center gap-3 rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5">
-                <Mail className="h-4 w-4 text-[#6F6962]" />
+              <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <Mail className="h-4 w-4 text-slate-400" />
 
-                <span className="text-sm text-[#A9A29A]">{profile?.email}</span>
+                <span className="truncate text-sm text-slate-600">
+                  {profile?.email}
+                </span>
               </div>
             </div>
 
@@ -395,7 +354,9 @@ export default function Profile() {
           </div>
 
           <div className="mt-6">
-            <label className="text-xs text-[#6F6962]">Bio</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Bio
+            </label>
 
             {isEditing ? (
               <textarea
@@ -407,10 +368,10 @@ export default function Profile() {
                   })
                 }
                 rows={5}
-                className="mt-2 w-full resize-none rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5 text-sm text-[#F2EDE4] outline-none focus:border-[#B9674B]"
+                className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
             ) : (
-              <p className="mt-2 rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-3 text-sm leading-6 text-[#A9A29A]">
+              <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-600">
                 {profile?.bio || "No bio added yet."}
               </p>
             )}
@@ -420,54 +381,16 @@ export default function Profile() {
 
       {/* Account actions */}
 
-      <div className="mt-6 space-y-4">
-
-        {/* Delete account */}
-        
-        <div className="flex flex-col gap-4 rounded-xl border border-red-500/20 bg-red-500/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-[#F2EDE4]">
-              Delete account
-            </h3>
-
-            <p className="mt-1 text-sm text-[#817A72]">
-              Your account will be disabled after OTP verification.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => requestDeletionMutation.mutate()}
-            disabled={requestDeletionMutation.isPending}
-            className="shrink-0 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {requestDeletionMutation.isPending
-              ? "Sending OTP..."
-              : "Delete Account"}
-          </button>
-        </div>
-
-        {/* Logout */}
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </button>
-        </div>
+      <div className="mt-6 flex justify-end">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex cursor-pointer items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </button>
       </div>
-
-      {/* Account deletion OTP modal */}
-
-      <AccountDeletionModal
-        open={isDeleteModalOpen}
-        loading={verifyDeletionMutation.isPending}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onVerify={(otp) => verifyDeletionMutation.mutate(otp)}
-      />
     </div>
   );
 }
@@ -489,11 +412,13 @@ function ProfileField({
 }: ProfileFieldProps) {
   return (
     <div>
-      <label className="text-xs text-[#6F6962]">{label}</label>
+      <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+        {label}
+      </label>
 
       <div className="relative mt-2">
         {icon && (
-          <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6F6962]">
+          <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             {icon}
           </div>
         )}
@@ -503,14 +428,19 @@ function ProfileField({
           disabled={!editing}
           onChange={(event) => onChange(event.target.value)}
           className={`
-            w-full rounded-lg border
-            border-[#2F2B27]
-            bg-[#211F1C]
+            w-full rounded-xl border
+            border-slate-200
+            bg-slate-50
             px-3 py-2.5
-            text-sm text-[#F2EDE4]
+            text-sm text-slate-900
             outline-none
+            transition-colors
             ${icon ? "pl-10" : ""}
-            ${editing ? "focus:border-[#B9674B]" : "cursor-default opacity-80"}
+            ${
+              editing
+                ? "focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                : "cursor-default opacity-80"
+            }
           `}
         />
       </div>

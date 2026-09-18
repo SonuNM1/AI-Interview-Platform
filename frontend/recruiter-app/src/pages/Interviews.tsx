@@ -237,17 +237,17 @@ export default function Interviews() {
   return (
     <div className="mx-auto w-full max-w-6xl">
       {/* Page Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-[#D98260]">
+          <p className="text-sm font-semibold text-violet-600">
             Recruiter Workspace
           </p>
 
-          <h1 className="mt-2 text-3xl font-semibold text-[#F2EDE4]">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
             Interviews
           </h1>
 
-          <p className="mt-3 text-sm text-[#817A72]">
+          <p className="mt-3 text-sm leading-6 text-slate-500">
             Create, schedule, publish, and manage your AI interviews.
           </p>
         </div>
@@ -255,7 +255,7 @@ export default function Interviews() {
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#D98260] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#C96F4F]"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:shadow-violet-200 sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           Create Interview
@@ -264,27 +264,31 @@ export default function Interviews() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="mt-8 rounded-2xl border border-[#2F2B27] bg-[#181715] p-8">
-          <p className="text-sm text-[#817A72]">Loading interviews...</p>
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <p className="text-sm text-slate-500">Loading interviews...</p>
         </div>
       )}
 
       {/* Error State */}
       {isError && (
-        <div className="mt-8 rounded-2xl border border-[#2F2B27] bg-[#181715] p-8">
-          <p className="text-sm text-red-400">Failed to load interviews.</p>
+        <div className="mt-8 rounded-2xl border border-red-100 bg-white p-8 shadow-sm">
+          <p className="text-sm font-medium text-red-600">
+            Failed to load interviews.
+          </p>
         </div>
       )}
 
       {/* Empty State */}
       {!isLoading && !isError && interviews.length === 0 && (
-        <div className="mt-8 rounded-2xl border border-dashed border-[#332B27] bg-[#181715] p-12 text-center">
-          <p className="text-sm text-[#817A72]">No interviews created yet.</p>
+        <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
+          <p className="text-sm text-slate-500">
+            No interviews created yet.
+          </p>
 
           <button
             type="button"
             onClick={() => setIsCreating(true)}
-            className="mt-4 cursor-pointer text-sm font-medium text-[#D98260] transition hover:text-[#C96F4F]"
+            className="mt-4 cursor-pointer text-sm font-semibold text-violet-600 transition-colors hover:text-violet-700"
           >
             Create your first interview
           </button>
@@ -297,46 +301,46 @@ export default function Interviews() {
           {interviews.map((interview) => (
             <div
               key={interview._id}
-              className="rounded-2xl border border-[#2F2B27] bg-[#181715] p-6"
+              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
             >
-              <div className="flex items-start justify-between gap-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 {/* Interview Information */}
                 <div className="min-w-0">
-                  <h2 className="text-lg font-semibold text-[#F2EDE4]">
+                  <h2 className="text-lg font-semibold text-slate-900">
                     {interview.title}
                   </h2>
 
-                  <p className="mt-1 text-sm text-[#817A72]">
+                  <p className="mt-1 text-sm text-slate-500">
                     {interview.role}
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-md bg-[#24211E] px-2.5 py-1 text-xs text-[#A9A29A]">
+                    <span className="rounded-lg border border-violet-100 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700">
                       {interview.type}
                     </span>
 
-                    <span className="rounded-md bg-[#24211E] px-2.5 py-1 text-xs text-[#A9A29A]">
+                    <span className="rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
                       {interview.difficulty}
                     </span>
 
-                    <span className="rounded-md bg-[#24211E] px-2.5 py-1 text-xs text-[#A9A29A]">
+                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
                       {interview.duration} min
                     </span>
 
-                    <span className="rounded-md bg-[#24211E] px-2.5 py-1 text-xs text-[#A9A29A]">
+                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
                       {interview.status}
                     </span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   {!interview.accessToken && (
                     <button
                       type="button"
                       onClick={() => publishMutation.mutate(interview._id)}
                       disabled={publishMutation.isPending}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#D98260] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#C96F4F] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:shadow-violet-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Send className="h-4 w-4" />
 
@@ -353,7 +357,7 @@ export default function Interviews() {
                           `/recruiter/interviews/${interview._id}/report`,
                         )
                       }
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#2F2B27] px-3 py-2 text-sm font-medium text-[#A9A29A] transition hover:bg-[#24211E] hover:text-[#F2EDE4]"
+                      className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-violet-50 hover:text-violet-600"
                     >
                       <FileText className="h-4 w-4" />
                       View Report
@@ -365,7 +369,7 @@ export default function Interviews() {
                   <button
                     type="button"
                     onClick={() => handleEdit(interview)}
-                    className="flex cursor-pointer items-center justify-center rounded-lg border border-[#2F2B27] p-2 text-[#A9A29A] transition hover:bg-[#24211E] hover:text-[#F2EDE4]"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-violet-50 hover:text-violet-600"
                     aria-label="Edit interview"
                   >
                     <Pencil className="h-4 w-4" />
@@ -377,7 +381,7 @@ export default function Interviews() {
                     type="button"
                     onClick={() => setDeletingInterview(interview)}
                     disabled={deleteMutation.isPending}
-                    className="flex cursor-pointer items-center justify-center rounded-lg border border-red-500/30 p-2 text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-500 transition-colors hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Delete interview"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -387,19 +391,23 @@ export default function Interviews() {
 
               {/* Interview Details */}
 
-              <div className="mt-5 grid gap-4 border-t border-[#2F2B27] pt-5 sm:grid-cols-2">
+              <div className="mt-5 grid gap-4 border-t border-slate-200 pt-5 sm:grid-cols-2">
                 <div>
-                  <p className="text-xs text-[#6F6962]">Candidate</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Candidate
+                  </p>
 
-                  <p className="mt-1 truncate text-sm text-[#A9A29A]">
+                  <p className="mt-1 truncate text-sm text-slate-600">
                     {interview.candidateId}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-[#6F6962]">Scheduled</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Scheduled
+                  </p>
 
-                  <p className="mt-1 text-sm text-[#A9A29A]">
+                  <p className="mt-1 text-sm text-slate-600">
                     {new Date(interview.scheduledAt).toLocaleString()}
                   </p>
                 </div>

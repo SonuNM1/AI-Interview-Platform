@@ -503,18 +503,31 @@ export const resetPasswordService = async (data: ResetPasswordSchema) => {
 
 export const requestAccountDeletion = async (
   userId: string,
-  email: string 
+  email: string,
 ) => {
-  await publishEvent("user_events", {
-    type: UserEventType.ACCOUNT_DELETION_REQUESTED, 
-    id: userId, 
-    email 
-  }) ; 
+  console.log("========== ACCOUNT DELETION REQUEST ==========");
+  console.log("User ID:", userId);
+  console.log("Email:", email);
 
-  return {
-    message: "Account deletion OTP sent successfully."
+  try {
+    console.log("Publishing ACCOUNT_DELETION_REQUESTED...");
+
+    await publishEvent("user_events", {
+      type: UserEventType.ACCOUNT_DELETION_REQUESTED,
+      id: userId,
+      email,
+    });
+
+    console.log("ACCOUNT_DELETION_REQUESTED published successfully");
+
+    return {
+      message: "Account deletion OTP sent successfully.",
+    };
+  } catch (error) {
+    console.error("❌ ACCOUNT DELETION REQUEST FAILED:", error);
+    throw error;
   }
-}
+};
 
 /* Verifies the account deletion OTP and soft-deletes the authentication account */
 

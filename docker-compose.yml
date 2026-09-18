@@ -1,93 +1,277 @@
-# Services that our application needs 
-
 services:
 
-  # PostgreSQL Database 
+  # PostgreSQL database used by Auth and User services
   postgres:
-
-    # Official Docker image 
-
     image: postgres:17
-
-    # Easy to identify container 
-
     container_name: ai-postgres
-
-    # Restart automatically after system reboot 
-
     restart: unless-stopped
-
-    # Initial database configuration 
 
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ai_interview
 
-    # HostPort : ContainerPort 
-
-    ports:
-      - "5432:5432"
-
-    # Persist database data 
+    # Persist database data when container is recreated
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  rabbitmq: 
+    networks:
+      - ai-network
+
+
+  # Redis - caching, sessions and pub/sub
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-redis
+    restart: unless-stopped
+
+    # Persist Redis data
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - ai-network
+
+
+  # RabbitMQ - message broker between microservices
+
+  rabbitmq:
     image: rabbitmq:3-management
     container_name: ai-rabbitmq
     restart: unless-stopped
-
-    ports: 
-      - "5672:5672" 
-      - "15672:15672"
 
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
+    networks:
+      - ai-network
 
-    ports: 
-      - "6379:6379"
 
-    restart: unless-stopped
+  # Elasticsearch - candidate search/indexing used by User Service
 
-  redis-commander: 
-    image: rediscommander/redis-commander
-    container_name: redis-commander
-    restart: unless-stopped
-
-    ports: 
-      - "8081:8081"
-
-    environment:
-      - REDIS_HOSTS=local:redis:6379
-
-    depends_on: 
-      - redis
-
-  elasticsearch: 
+  elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.19.20
     container_name: ai-elasticsearch
     restart: unless-stopped
 
-    environment: 
+    environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
-      xpack.license.self_generated.type: trial 
+      xpack.license.self_generated.type: trial
 
-    ports: 
-      - "9200:9200"
+    # Persist Elasticsearch indexes
 
-    volumes: 
+    volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
-# Named Docker Volume 
+    networks:
+      - ai-network
+
+  # API Gateway 
+
+  api-gateway:
+    image: sonunm/ai-api-gateway:latest
+    container_name: ai-api-gateway
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/api-gateway/.env
+
+    depends_on:
+      - auth-service
+      - user-service
+      - notification-service
+      - interview-service
+      - file-service
+      - chat-service
+      - ai-service
+      - rag-service
+      - mock-interview-service
+      - payment-service
+
+    ports:
+      - "4000:4000"
+
+    networks:
+      - ai-network
+
+  # Auth Service 
+
+  auth-service:
+    image: sonunm/ai-auth-service:latest
+    container_name: ai-auth-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/auth-service/.env
+
+    depends_on:
+      - redis
+      - rabbitmq
+
+    networks:
+      - ai-network
+
+  # User Service 
+
+  user-service:
+    image: sonunm/ai-user-service:latest
+    container_name: ai-user-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/user-service/.env
+
+    depends_on:
+      - rabbitmq
+      - elasticsearch
+
+    networks:
+      - ai-network
+
+  # Notification Service 
+
+  notification-service:
+    image: sonunm/ai-notification-service:latest
+    container_name: ai-notification-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/notification-service/.env
+
+    depends_on:
+      - rabbitmq
+      - redis
+
+    networks:
+      - ai-network
+
+  # Interview Service 
+
+  interview-service:
+    image: sonunm/ai-interview-service:latest
+    container_name: ai-interview-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/interview-service/.env
+
+    depends_on:
+      - rabbitmq
+
+    networks:
+      - ai-network
+
+  # File Service 
+
+  file-service:
+    image: sonunm/ai-file-service:latest
+    container_name: ai-file-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/file-service/.env
+
+    networks:
+      - ai-network
+
+  # Chat Service 
+
+  chat-service:
+    image: sonunm/ai-chat-service:latest
+    container_name: ai-chat-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/chat-service/.env
+
+    depends_on:
+      - redis
+      - rabbitmq
+
+    networks:
+      - ai-network
+
+  # AI Service 
+
+  ai-service:
+    image: sonunm/ai-ai-service:latest
+    container_name: ai-ai-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/ai-service/.env
+
+    networks:
+      - ai-network
+
+  # RAG Service 
+
+  rag-service:
+    image: sonunm/ai-rag-service:latest
+    container_name: ai-rag-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/rag-service/.env
+
+    networks:
+      - ai-network
+
+  # Mock Interview Service 
+
+  mock-interview-service:
+    image: sonunm/ai-mock-interview-service:latest
+    container_name: ai-mock-interview-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/mock-interview-service/.env
+
+    networks:
+      - ai-network
+
+  # Payment Service 
+
+  payment-service:
+    image: sonunm/ai-payment-service:latest
+    container_name: ai-payment-service
+    restart: unless-stopped
+
+    env_file:
+      - ./apps/payment-service/.env
+
+    depends_on:
+      - rabbitmq
+
+    networks:
+      - ai-network
+
+  # Persistent Volumes 
 
 volumes:
+
+  # PostgreSQL data survives container recreation
+
   postgres_data:
+
+  # Redis data survives container recreation
+
+  redis_data:
+
+  # Elasticsearch indexes survive container recreation
+
   elasticsearch_data:
+
+# Internal Network 
+
+networks:
+
+  # All services communicate using Docker service names
+
+  ai-network:
+    driver: bridge

@@ -1,7 +1,10 @@
 import type { Dispatch, SetStateAction } from "react";
 import { X } from "lucide-react";
 import SkillsInput from "./SkillsInput";
-import type { Interview, UpdateInterviewData } from "../services/interview.api";
+import type {
+  Interview,
+  UpdateInterviewData,
+} from "../services/interview.api";
 import { toast } from "sonner";
 
 interface EditInterviewModalProps {
@@ -21,7 +24,9 @@ export function EditInterviewModal({
   onClose,
   onSubmit,
 }: EditInterviewModalProps) {
-  const handleInterviewTypeChange = (value: UpdateInterviewData["type"]) => {
+  const handleInterviewTypeChange = (
+    value: UpdateInterviewData["type"],
+  ) => {
     if (value !== "TECHNICAL") {
       toast.info(
         "Only Technical interviews are currently supported. Other interview types are coming soon.",
@@ -37,7 +42,6 @@ export function EditInterviewModal({
   };
 
   // Converts an ISO date into the local datetime format required by datetime-local.
-
   function formatDateTimeLocal(value?: string) {
     if (!value) {
       return "";
@@ -46,22 +50,24 @@ export function EditInterviewModal({
     const date = new Date(value);
 
     const offset = date.getTimezoneOffset();
-    const localDate = new Date(date.getTime() - offset * 60 * 1000);
+    const localDate = new Date(
+      date.getTime() - offset * 60 * 1000,
+    );
 
     return localDate.toISOString().slice(0, 16);
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#2F2B27] bg-[#181715]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-[#2F2B27] px-6 py-5">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5 sm:px-7">
           <div>
-            <h2 className="text-lg font-semibold text-[#F2EDE4]">
+            <h2 className="text-lg font-bold text-slate-900">
               Edit Interview
             </h2>
 
-            <p className="mt-1 text-sm text-[#817A72]">
+            <p className="mt-1 text-sm text-slate-500">
               Update the interview configuration.
             </p>
           </div>
@@ -71,19 +77,30 @@ export function EditInterviewModal({
             onClick={onClose}
             disabled={isPending}
             aria-label="Close modal"
-            className="cursor-pointer rounded-lg p-2 text-[#817A72] transition-colors hover:bg-[#24211E] hover:text-[#F2EDE4]"
+            className="
+              flex h-9 w-9
+              cursor-pointer
+              items-center justify-center
+              rounded-xl
+              text-slate-400
+              transition-colors
+              hover:bg-violet-50
+              hover:text-violet-600
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+            "
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Form */}
-
-        <div className="grid gap-5 p-6 sm:grid-cols-2">
+        <div className="grid gap-5 p-6 sm:grid-cols-2 sm:p-7">
           {/* Title */}
-
           <div>
-            <label className="mb-2 block text-sm text-[#A9A29A]">Title</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Title
+            </label>
 
             <input
               value={form.title ?? ""}
@@ -94,14 +111,28 @@ export function EditInterviewModal({
                 }))
               }
               placeholder="MERN Full Stack Interview"
-              className="w-full rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5 text-sm text-[#F2EDE4] outline-none placeholder:text-[#6F6962] focus:border-[#D98260]"
+              className="
+                w-full rounded-xl
+                border border-slate-200
+                bg-slate-50
+                px-3.5 py-2.5
+                text-sm text-slate-900
+                outline-none
+                transition
+                placeholder:text-slate-400
+                focus:border-violet-400
+                focus:bg-white
+                focus:ring-4
+                focus:ring-violet-100
+              "
             />
           </div>
 
           {/* Role */}
-
           <div>
-            <label className="mb-2 block text-sm text-[#A9A29A]">Role</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Role
+            </label>
 
             <input
               value={form.role ?? ""}
@@ -112,14 +143,26 @@ export function EditInterviewModal({
                 }))
               }
               placeholder="Full Stack Developer"
-              className="w-full rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5 text-sm text-[#F2EDE4] outline-none placeholder:text-[#6F6962] focus:border-[#D98260]"
+              className="
+                w-full rounded-xl
+                border border-slate-200
+                bg-slate-50
+                px-3.5 py-2.5
+                text-sm text-slate-900
+                outline-none
+                transition
+                placeholder:text-slate-400
+                focus:border-violet-400
+                focus:bg-white
+                focus:ring-4
+                focus:ring-violet-100
+              "
             />
           </div>
 
           {/* Description */}
-
           <div className="sm:col-span-2">
-            <label className="mb-2 block text-sm text-[#A9A29A]">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Description
             </label>
 
@@ -133,14 +176,26 @@ export function EditInterviewModal({
               }
               rows={3}
               placeholder="Interview description"
-              className="w-full resize-none rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5 text-sm text-[#F2EDE4] outline-none placeholder:text-[#6F6962] focus:border-[#D98260]"
+              className="
+                w-full resize-none rounded-xl
+                border border-slate-200
+                bg-slate-50
+                px-3.5 py-2.5
+                text-sm text-slate-900
+                outline-none
+                transition
+                placeholder:text-slate-400
+                focus:border-violet-400
+                focus:bg-white
+                focus:ring-4
+                focus:ring-violet-100
+              "
             />
           </div>
 
           {/* Scheduled date and time */}
-          
           <div>
-            <label className="mb-2 block text-sm text-[#A9A29A]">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Scheduled Date & Time
             </label>
 
@@ -153,14 +208,27 @@ export function EditInterviewModal({
                   scheduledAt: e.target.value,
                 }))
               }
-              className="w-full rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5 text-sm text-[#F2EDE4] outline-none focus:border-[#D98260]"
+              className="
+                w-full rounded-xl
+                border border-slate-200
+                bg-slate-50
+                px-3.5 py-2.5
+                text-sm text-slate-900
+                outline-none
+                transition
+                focus:border-violet-400
+                focus:bg-white
+                focus:ring-4
+                focus:ring-violet-100
+              "
             />
           </div>
 
           {/* Skills */}
-
           <div className="sm:col-span-2">
-            <label className="mb-2 block text-sm text-[#A9A29A]">Skills</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Skills
+            </label>
 
             <SkillsInput
               value={form.skills ?? []}
@@ -174,9 +242,8 @@ export function EditInterviewModal({
           </div>
 
           {/* Duration */}
-
           <div>
-            <label className="mb-2 block text-sm text-[#A9A29A]">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Duration (minutes)
             </label>
 
@@ -190,14 +257,25 @@ export function EditInterviewModal({
                   duration: Number(e.target.value),
                 }))
               }
-              className="w-full rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5 text-sm text-[#F2EDE4] outline-none focus:border-[#D98260]"
+              className="
+                w-full rounded-xl
+                border border-slate-200
+                bg-slate-50
+                px-3.5 py-2.5
+                text-sm text-slate-900
+                outline-none
+                transition
+                focus:border-violet-400
+                focus:bg-white
+                focus:ring-4
+                focus:ring-violet-100
+              "
             />
           </div>
 
           {/* Difficulty */}
-
           <div>
-            <label className="mb-2 block text-sm text-[#A9A29A]">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Difficulty
             </label>
 
@@ -206,11 +284,24 @@ export function EditInterviewModal({
               onChange={(e) =>
                 setForm((current) => ({
                   ...current,
-                  difficulty: e.target
-                    .value as UpdateInterviewData["difficulty"],
+                  difficulty:
+                    e.target
+                      .value as UpdateInterviewData["difficulty"],
                 }))
               }
-              className="w-full cursor-pointer rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5 text-sm text-[#F2EDE4] outline-none focus:border-[#D98260]"
+              className="
+                w-full cursor-pointer rounded-xl
+                border border-slate-200
+                bg-slate-50
+                px-3.5 py-2.5
+                text-sm text-slate-900
+                outline-none
+                transition
+                focus:border-violet-400
+                focus:bg-white
+                focus:ring-4
+                focus:ring-violet-100
+              "
             >
               <option value="EASY">Easy</option>
               <option value="MEDIUM">Medium</option>
@@ -219,9 +310,8 @@ export function EditInterviewModal({
           </div>
 
           {/* Interview Type */}
-
           <div>
-            <label className="mb-2 block text-sm text-[#A9A29A]">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Interview Type
             </label>
 
@@ -232,7 +322,19 @@ export function EditInterviewModal({
                   e.target.value as UpdateInterviewData["type"],
                 )
               }
-              className="w-full cursor-pointer rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3 py-2.5 text-sm text-[#F2EDE4] outline-none focus:border-[#D98260]"
+              className="
+                w-full cursor-pointer rounded-xl
+                border border-slate-200
+                bg-slate-50
+                px-3.5 py-2.5
+                text-sm text-slate-900
+                outline-none
+                transition
+                focus:border-violet-400
+                focus:bg-white
+                focus:ring-4
+                focus:ring-violet-100
+              "
             >
               <option value="TECHNICAL">Technical</option>
               <option value="HR">HR</option>
@@ -243,12 +345,24 @@ export function EditInterviewModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-[#2F2B27] px-6 py-4">
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:justify-end sm:px-7">
           <button
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="cursor-pointer rounded-lg border border-[#2F2B27] px-4 py-2.5 text-sm text-[#A9A29A] transition-colors hover:bg-[#24211E] disabled:cursor-not-allowed disabled:opacity-50"
+            className="
+              cursor-pointer rounded-xl
+              border border-slate-200
+              bg-white
+              px-4 py-2.5
+              text-sm font-medium
+              text-slate-600
+              transition-colors
+              hover:bg-slate-50
+              hover:text-slate-900
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+            "
           >
             Cancel
           </button>
@@ -257,7 +371,24 @@ export function EditInterviewModal({
             type="button"
             onClick={onSubmit}
             disabled={isPending}
-            className="cursor-pointer rounded-lg bg-[#D98260] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#C96F4F] disabled:cursor-not-allowed disabled:opacity-50"
+            className="
+              cursor-pointer rounded-xl
+              bg-gradient-to-r
+              from-violet-600
+              to-indigo-600
+              px-4 py-2.5
+              text-sm font-semibold
+              text-white
+              shadow-md
+              shadow-violet-200
+              transition-all
+              hover:-translate-y-0.5
+              hover:from-violet-700
+              hover:to-indigo-700
+              hover:shadow-lg
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+            "
           >
             {isPending ? "Saving..." : "Save Changes"}
           </button>

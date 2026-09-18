@@ -28,7 +28,8 @@
     "multer": "^2.2.0",
     "pino": "^10.3.1",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "cors": "^2.8.6"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.8",

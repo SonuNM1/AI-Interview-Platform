@@ -182,8 +182,10 @@ export default function InterviewReport() {
   if (isLoading) {
     return (
       <div className="mx-auto w-full max-w-5xl">
-        <div className="rounded-2xl border border-[#2F2B27] bg-[#181715] p-8">
-          <p className="text-sm text-[#817A72]">Loading interview report...</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <p className="text-sm text-slate-500">
+            Loading interview report...
+          </p>
         </div>
       </div>
     );
@@ -193,15 +195,15 @@ export default function InterviewReport() {
   if (isError || !report) {
     return (
       <div className="mx-auto w-full max-w-5xl">
-        <div className="rounded-2xl border border-[#2F2B27] bg-[#181715] p-8">
-          <p className="text-sm text-red-400">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <p className="text-sm text-red-600">
             Failed to load interview report.
           </p>
 
           <button
             type="button"
             onClick={() => navigate("/recruiter/interviews")}
-            className="mt-4 text-sm text-[#D98260]"
+            className="mt-4 cursor-pointer text-sm font-medium text-violet-600 transition-colors hover:text-violet-700"
           >
             Back to Interviews
           </button>
@@ -214,23 +216,23 @@ export default function InterviewReport() {
     <div className="mx-auto w-full max-w-5xl">
       {/* Page header */}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => navigate("/recruiter/interviews")}
-            className="rounded-lg border border-[#2F2B27] p-2 text-[#A9A29A] transition hover:bg-[#24211E] hover:text-[#F2EDE4]"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-violet-50 hover:text-violet-600"
             aria-label="Back to interviews"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
 
           <div>
-            <p className="text-sm font-medium text-[#D98260]">
+            <p className="text-sm font-semibold text-violet-600">
               Interview Report
             </p>
 
-            <h1 className="mt-1 text-3xl font-semibold text-[#F2EDE4]">
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
               Candidate Evaluation
             </h1>
           </div>
@@ -241,7 +243,7 @@ export default function InterviewReport() {
           type="button"
           onClick={handleDownloadPDF}
           disabled={!candidate}
-          className="flex items-center gap-2 rounded-lg border border-[#2F2B27] px-3 py-2 text-sm text-[#A9A29A] transition hover:bg-[#24211E] hover:text-[#F2EDE4] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-violet-50 hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
           Download Report
@@ -249,51 +251,70 @@ export default function InterviewReport() {
       </div>
 
       {/* Overall scores */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#2F2B27] bg-[#181715] p-6">
-          <p className="text-sm text-[#817A72]">Overall Score</p>
+      <div className="mt-8 grid gap-5 sm:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">
+            Overall Score
+          </p>
 
-          <p className="mt-2 text-4xl font-semibold text-[#F2EDE4]">
+          <p className="mt-2 text-4xl font-bold tracking-tight text-slate-900">
             {Math.round(report.overallScore)}
-            <span className="text-lg text-[#817A72]"> / 10</span>
+            <span className="text-lg font-medium text-slate-400">
+              {" "}
+              / 10
+            </span>
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#2F2B27] bg-[#181715] p-6">
-          <p className="text-sm text-[#817A72]">Communication Score</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">
+            Communication Score
+          </p>
 
-          <p className="mt-2 text-4xl font-semibold text-[#F2EDE4]">
+          <p className="mt-2 text-4xl font-bold tracking-tight text-slate-900">
             {Math.round(report.communicationScore)}
-            <span className="text-lg text-[#817A72]"> / 10</span>
+            <span className="text-lg font-medium text-slate-400">
+              {" "}
+              / 10
+            </span>
           </p>
         </div>
       </div>
 
       {/* Recommendation */}
-      <div className="mt-4 rounded-2xl border border-[#2F2B27] bg-[#181715] p-6">
-        <p className="text-sm text-[#817A72]">Recommendation</p>
+      <div className="mt-5 rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-indigo-50 p-6">
+        <p className="text-sm font-medium text-slate-500">
+          Recommendation
+        </p>
 
-        <p className="mt-2 text-2xl font-semibold text-[#D98260]">
+        <p className="mt-2 text-2xl font-bold tracking-tight text-violet-700">
           {report.recommendation}
         </p>
       </div>
 
       {/* Summary */}
-      <div className="mt-4 rounded-2xl border border-[#2F2B27] bg-[#181715] p-6">
-        <h2 className="text-lg font-semibold text-[#F2EDE4]">Summary</h2>
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Summary
+        </h2>
 
-        <p className="mt-3 text-sm leading-7 text-[#A9A29A]">
+        <p className="mt-3 text-sm leading-7 text-slate-600">
           {report.summary}
         </p>
       </div>
 
       {/* Strengths */}
-      <div className="mt-4 rounded-2xl border border-[#2F2B27] bg-[#181715] p-6">
-        <h2 className="text-lg font-semibold text-[#F2EDE4]">Strengths</h2>
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Strengths
+        </h2>
 
         <ul className="mt-4 space-y-2">
           {report.strengths.map((strength, index) => (
-            <li key={index} className="text-sm leading-6 text-[#A9A29A]">
+            <li
+              key={index}
+              className="text-sm leading-6 text-slate-600"
+            >
               • {strength}
             </li>
           ))}
@@ -301,14 +322,17 @@ export default function InterviewReport() {
       </div>
 
       {/* Weaknesses */}
-      <div className="mt-4 rounded-2xl border border-[#2F2B27] bg-[#181715] p-6">
-        <h2 className="text-lg font-semibold text-[#F2EDE4]">
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">
           Areas for Improvement
         </h2>
 
         <ul className="mt-4 space-y-2">
           {report.weaknesses.map((weakness, index) => (
-            <li key={index} className="text-sm leading-6 text-[#A9A29A]">
+            <li
+              key={index}
+              className="text-sm leading-6 text-slate-600"
+            >
               • {weakness}
             </li>
           ))}

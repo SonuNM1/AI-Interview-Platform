@@ -140,3 +140,11 @@ Role-based Routing
 - Razorpay Payment Gateway 
 - Webhooks (Payment & Events)
 - Admin Panel 
+
+| Thing        | Simple meaning                                              |
+| ------------ | ----------------------------------------------------------- |
+| **Docker**   | Packages your application into a container                  |
+| **ECR**      | Stores those Docker images privately in AWS                 |
+| **ECS**      | Runs those containers on AWS                                |
+| **IAM Role** | Gives a running AWS service permission to use AWS resources |
+| **S3**       | Stores your files                                           |

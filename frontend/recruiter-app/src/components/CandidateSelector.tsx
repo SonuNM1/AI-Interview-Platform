@@ -44,19 +44,19 @@ export default function CandidateSelector({
 
   if (selectedCandidate) {
     return (
-      <div className="rounded-lg border border-[#332B27] bg-[#181715] p-3">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
         <div className="flex items-center justify-between">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-[#F2EDE4]">
+            <p className="truncate text-sm font-semibold text-slate-900">
               {getCandidateName(selectedCandidate)}
             </p>
 
-            <p className="mt-1 truncate text-xs text-[#817A72]">
+            <p className="mt-1 truncate text-xs text-slate-500">
               {selectedCandidate.email}
             </p>
 
             {selectedCandidate.username && (
-              <p className="mt-1 truncate text-xs text-[#6F6962]">
+              <p className="mt-1 truncate text-xs text-slate-400">
                 @{selectedCandidate.username}
               </p>
             )}
@@ -65,7 +65,7 @@ export default function CandidateSelector({
           <button
             type="button"
             onClick={handleRemove}
-            className="ml-3 cursor-pointer rounded-md p-1.5 text-[#817A72] transition hover:bg-[#24211E] hover:text-[#D98260]"
+            className="ml-3 cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
             aria-label="Remove candidate"
           >
             <X className="h-4 w-4" />
@@ -77,27 +77,27 @@ export default function CandidateSelector({
 
   return (
     <div className="relative">
-      <div className="flex items-center rounded-lg border border-[#2F2B27] bg-[#211F1C] px-3">
-        <Search className="h-4 w-4 shrink-0 text-[#6F6962]" />
+      <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 px-3 transition-colors focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100">
+        <Search className="h-4 w-4 shrink-0 text-slate-400" />
 
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search candidate by name, username or email..."
-          className="w-full bg-transparent px-3 py-2.5 text-sm text-[#F2EDE4] outline-none placeholder:text-[#6F6962]"
+          className="w-full bg-transparent px-3 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400"
         />
       </div>
 
       {query.trim().length >= 2 && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border border-[#2F2B27] bg-[#211F1C] shadow-xl">
+        <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
           {isFetching && (
-            <div className="px-4 py-3 text-sm text-[#817A72]">
+            <div className="px-4 py-3 text-sm text-slate-500">
               Searching candidates...
             </div>
           )}
 
           {!isFetching && candidates.length === 0 && (
-            <div className="px-4 py-3 text-sm text-[#817A72]">
+            <div className="px-4 py-3 text-sm text-slate-500">
               No candidates found.
             </div>
           )}
@@ -108,18 +108,18 @@ export default function CandidateSelector({
                 key={candidate.id}
                 type="button"
                 onClick={() => handleSelect(candidate)}
-                className="block w-full cursor-pointer px-4 py-3 text-left transition hover:bg-[#2A2521]"
+                className="block w-full cursor-pointer px-4 py-3 text-left transition-colors hover:bg-violet-50/60"
               >
-                <p className="text-sm font-medium text-[#F2EDE4]">
+                <p className="text-sm font-semibold text-slate-900">
                   {getCandidateName(candidate)}
                 </p>
 
-                <p className="mt-1 text-xs text-[#817A72]">
+                <p className="mt-1 text-xs text-slate-500">
                   {candidate.email}
                 </p>
 
                 {candidate.username && (
-                  <p className="mt-1 text-xs text-[#6F6962]">
+                  <p className="mt-1 text-xs text-slate-400">
                     @{candidate.username}
                   </p>
                 )}

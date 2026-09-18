@@ -57,19 +57,19 @@ export default function SkillsInput({
   };
 
   return (
-    <div className="rounded-lg border border-[#332B27] bg-[#181715] px-3 py-2">
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition-colors focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100">
       <div className="flex flex-wrap gap-2">
         {value.map((skill) => (
           <span
             key={skill}
-            className="flex items-center gap-1 rounded-md bg-[#2A2521] px-2.5 py-1 text-xs text-[#F2EDE4]"
+            className="flex items-center gap-1.5 rounded-lg border border-violet-100 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700"
           >
             {skill}
 
             <button
               type="button"
               onClick={() => removeSkill(skill)}
-              className="cursor-pointer text-[#817A72] transition hover:text-[#D98260]"
+              className="cursor-pointer text-violet-400 transition-colors hover:text-red-500"
               aria-label={`Remove ${skill}`}
             >
               <X className="h-3.5 w-3.5" />
@@ -88,7 +88,7 @@ export default function SkillsInput({
               ? "Type a skill and press Enter..."
               : "Add another skill..."
           }
-          className="min-w-[180px] flex-1 bg-transparent py-1 text-sm text-[#F2EDE4] outline-none placeholder:text-[#6F6962]"
+          className="min-w-[180px] flex-1 bg-transparent py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400"
         />
       </div>
     </div>
