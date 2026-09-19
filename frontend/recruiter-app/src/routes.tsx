@@ -5,7 +5,6 @@ import { RecruiterLayout } from "./layouts/RecruiterLayout";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Interviews from "./pages/Interviews";
-import Candidates from "./pages/Candidates";
 import Settings from "./pages/Settings";
 import InterviewReport from "./pages/InterviewReport";
 
