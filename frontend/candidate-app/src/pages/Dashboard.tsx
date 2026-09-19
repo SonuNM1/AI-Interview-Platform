@@ -4,7 +4,6 @@ import { GreetingSection } from "../components/Dashboard/GreetingSection";
 import { UpcomingInterview } from "../components/Dashboard/UpcomingInterview";
 import { DashboardStats } from "../components/Dashboard/DashboardStats";
 import { PerformanceOverview } from "../components/Dashboard/PerformanceOverview";
-import { AIRecommendations } from "../components/Dashboard/AIRecommendation";
 import { MentorRecommendations } from "../components/Dashboard/MentorRecommendations";
 
 export function Dashboard() {

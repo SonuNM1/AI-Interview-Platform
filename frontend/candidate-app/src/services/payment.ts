@@ -3,12 +3,6 @@ import {
   verifyPayment,
 } from "./payment.api";
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
 export const handleMentorshipPayment = async (
   mentorId: string,
   mentorshipId?: string,
@@ -17,28 +11,31 @@ export const handleMentorshipPayment = async (
     mentorId,
     mentorshipId,
   );
+
   const {
     orderId,
     amount,
     currency,
     keyId,
   } = result.data;
+
+  if (!window.Razorpay) {
+    throw new Error("Razorpay SDK is not loaded");
+  }
+
   const razorpay = new window.Razorpay({
     key: keyId,
     amount,
     currency,
     order_id: orderId,
-    handler: async (response: any) => {
+    handler: async (response) => {
       await verifyPayment({
-        razorpay_order_id:
-          response.razorpay_order_id,
-
-        razorpay_payment_id:
-          response.razorpay_payment_id,
-        razorpay_signature:
-          response.razorpay_signature,
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
       });
     },
   });
+
   razorpay.open();
 };

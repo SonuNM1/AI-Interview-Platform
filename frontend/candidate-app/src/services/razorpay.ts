@@ -1,5 +1,3 @@
-// Minimal Razorpay Checkout options used by the mentorship subscription flow
-
 export interface RazorpaySubscriptionOptions {
   key: string;
   subscription_id: string;
@@ -14,8 +12,6 @@ export interface RazorpaySubscriptionOptions {
     ondismiss?: () => void;
   };
 }
-
-// Loads Razorpay Checkout only once and reuses the script afterwards
 
 export const loadRazorpay = async (): Promise<boolean> => {
   if (window.Razorpay) {
